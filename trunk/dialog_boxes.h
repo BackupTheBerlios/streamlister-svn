@@ -66,6 +66,31 @@ class StationSelectionDialog : public Gtk::Dialog {
 	
 };
 
+class PreferencesDialog : public Gtk::Dialog{
+    public:
+	PreferencesDialog(const Glib::ustring &filename=Glib::ustring());
+	
+	void run();
+	
+	Glib::ustring get_url() const;
+	Glib::ustring get_player_cmd() const;
+    
+    protected:
+	virtual void on_response(int);
+    
+    private:
+	Gtk::HBox  m_numberHBox;
+	Gtk::Label m_numberLabel;
+	Gtk::Entry m_numberEntry;
+	Gtk::HBox  m_URLHBox;
+	Gtk::Label m_URLLabel;
+	Gtk::Entry m_URLEntry;
+	Gtk::HBox  m_PlayerHBox;
+	Gtk::Label m_PlayerLabel;
+	Gtk::Entry m_PlayerEntry;
+    
+};
+
 class AboutDialog : public Gtk::Dialog {
     public:
 	AboutDialog();

@@ -89,6 +89,58 @@ void StationSelectionDialog::_ok_clicked(){
     Gtk::Dialog::response(atoi(selected_path.to_string().c_str()));
 }
 
+/*** class PreferencesDialog ***/
+PreferencesDialog::PreferencesDialog(const Glib::ustring &filename)
+	:Gtk::Dialog("Preferences", false, true),
+	 m_numberLabel("Number of entries to get: "),
+	 m_URLLabel("URL of XML file: "),
+	 m_PlayerLabel("player command: ")
+{
+    std::cout << "m_URLEntry.get_width_chars(): " << m_URLEntry.get_width_chars() << std::endl;
+    
+    /* read preferences from file */
+    
+    /* set default preferences */
+    m_numberEntry.set_text(DEFAULT_NUMBER_ENTRIES);
+    m_URLEntry.set_text(SHOUTCAST_URL);
+    m_PlayerEntry.set_text(PLAYER_CMD);
+    
+    /* make gui */
+    //~ set_size_request(300, 200);
+    m_numberEntry.set_width_chars(4);
+    m_numberHBox.pack_start(m_numberLabel, Gtk::PACK_SHRINK);
+    m_numberHBox.pack_start(m_numberEntry, Gtk::PACK_SHRINK);
+    m_URLEntry.set_width_chars(50);
+    m_URLHBox.pack_start(m_URLLabel, Gtk::PACK_SHRINK);
+    m_URLHBox.pack_start(m_URLEntry, Gtk::PACK_SHRINK);
+    m_PlayerEntry.set_width_chars(50);
+    m_PlayerHBox.pack_start(m_PlayerLabel, Gtk::PACK_SHRINK);
+    m_PlayerHBox.pack_start(m_PlayerEntry, Gtk::PACK_SHRINK);
+    
+    get_vbox()->pack_start(m_numberHBox);
+    get_vbox()->pack_start(m_PlayerHBox);
+    get_vbox()->pack_start(m_URLHBox);
+    add_button("_OK", 1);
+    add_button("_Cancel", 2);
+    show_all_children();
+}
+
+void PreferencesDialog::run(){
+    Gtk::Dialog::run();
+}
+
+void PreferencesDialog::on_response(int response_id){
+    hide();
+}
+
+Glib::ustring PreferencesDialog::get_url() const{
+    return string_subst(m_URLEntry.get_text(), m_numberEntry.get_text());
+}
+
+Glib::ustring PreferencesDialog::get_player_cmd() const{
+    return m_PlayerEntry.get_text();
+}
+
 /*** class AboutDialog ***/
 
 AboutDialog::AboutDialog()
