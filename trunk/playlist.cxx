@@ -294,7 +294,7 @@ void PlaylistFile::parse_file(const PlaylistFile::string_type &plsfile){
 	
 	std::cerr << "+++ERROR: could not find playlist header" << std::endl;
 	dout(1) << "########################################" << std::endl;
-	dout(1) << body << std::endl;
+	dout(1) << plsfile << std::endl;
 	dout(1) << "########################################" << std::endl;
     }
     
