@@ -69,31 +69,37 @@ class StationSelectionDialog : public Gtk::Dialog {
 class CheckboxListDialog : public Gtk::Dialog{
     public:
 	typedef Glib::ustring string_type;
-	typedef std::pair<string_type, bool> item_type;
+	typedef Configuration::item_type item_type;
+	typedef Configuration::itemlist_type itemlist_type;
     
     public:
 	//~ CheckboxListDialog(const string_type&, const std::vector<std::pair<string_type, bool> > & = (std::vector<std::pair<string_type, bool> >()));
-	CheckboxListDialog(const string_type&, const Configuration::itemlist_type &);
+	CheckboxListDialog(const string_type&, itemlist_type &);
 	
 	int run();
 	
 	//~ void set_items(const std::vector<string_type> &);
-	const Configuration::itemlist_type & get_items() const{return m_vectorItems;}
+	const itemlist_type & get_items() const{return m_vectorItems;}
     
     protected:
-	virtual void add_items(const Configuration::itemlist_type &);
+	virtual void add_items(const itemlist_type &);
 	virtual void on_response(int response_id);
 	//~ virtual void toggled(int);
     
     private:
 	std::vector<Gtk::HBox> m_vectorHBox;
 	std::vector<Gtk::CheckButton*> m_vectorpCheckButton;
-	std::vector<std::pair<string_type, bool> > m_vectorItems;
+	itemlist_type &m_vectorItems;
 };
 
 //~ class RatingsDialog : public CheckboxListDialog{
     //~ public:
 	//~ typedef CheckboxListDialog::string_type string_type;
+	//~ typedef CheckboxListDialog::item_type item_type;
+	//~ typedef CheckboxListDialog::itemlist_type itemlist_type;
+    
+    //~ public:
+	//~ RatingsDialog(const string_type&, itemlist_type &);
     
 //~ };
 
@@ -108,7 +114,7 @@ class PreferencesDialog : public Gtk::Dialog{
 	
 	string_type get_url() const;
 	string_type get_player_cmd() const;
-	const Configuration::itemlist_type& get_columns() const;
+	const Configuration::itemlist_type& get_columns();
 	const Configuration& get_config() const;
 	void save();
     
@@ -139,7 +145,7 @@ class PreferencesDialog : public Gtk::Dialog{
 	Gtk::Button m_RatingsButton;
 	
 	CheckboxListDialog m_ColumnsDialog;
-	//~ CheckboxListDialog m_RatingsDialog;
+	CheckboxListDialog m_RatingsDialog;
 };
 
 class AboutDialog : public Gtk::Dialog {

@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <cassert>
 
+#include <utility>
 #include <iostream>
 
 #include <vector>
@@ -102,10 +103,10 @@ void StationSelectionDialog::_ok_clicked(){
 }
 
 /*** class CheckboxListDialog ***/
-CheckboxListDialog::CheckboxListDialog(const CheckboxListDialog::string_type &title, const std::vector<std::pair<CheckboxListDialog::string_type, bool> > &items)
-	:Gtk::Dialog(title, false, true)
+CheckboxListDialog::CheckboxListDialog(const string_type &title, itemlist_type &items)
+	:Gtk::Dialog(title, false, true),m_vectorItems(items)
 {
-    dout(1) << "CheckboxListDialog::CheckboxListDialog( ... )" << std::endl;
+    dout(7) << "CheckboxListDialog::CheckboxListDialog( ... )" << std::endl;
     add_items(items);
     add_button("_OK", 1);
     add_button("_Cancel", 0);
@@ -116,7 +117,7 @@ int CheckboxListDialog::run(){
     return Gtk::Dialog::run();
 }
 
-void CheckboxListDialog::add_items(const std::vector<std::pair<string_type, bool> > &items){
+void CheckboxListDialog::add_items(const itemlist_type &items){
     /* Just add items in order given */
     if(items.size()){
 	int j = 0;
@@ -126,7 +127,7 @@ void CheckboxListDialog::add_items(const std::vector<std::pair<string_type, bool
 	    get_vbox()->add(*pCB);
 	    m_vectorpCheckButton.push_back(pCB);
 	    //~ m_vectorItems.push_back(std::make_pair(*i, false));
-	    m_vectorItems.push_back(*i);
+	    //~ m_vectorItems.push_back(*i);
 	    
 	    //~ pCB->signal_toggled().connect(sigc::bind<int>( sigc::mem_fun(*this, &CheckboxListDialog::toggled), j));
 	}
@@ -137,9 +138,12 @@ void CheckboxListDialog::on_response(int response_id){
     hide();
     if(response_id){
 	/* they pressed OK, so save state */
-	m_vectorItems.clear();
 	for(std::vector<Gtk::CheckButton*>::iterator i = m_vectorpCheckButton.begin(); i != m_vectorpCheckButton.end(); i++){
-	    m_vectorItems.push_back(std::make_pair((*i)->get_label(), (*i)->get_active()));
+	    itemlist_type::iterator j = std::find_if(m_vectorItems.begin(), m_vectorItems.end(), cmp_pair1st( (*i)->get_label() ));
+	    if(j != m_vectorItems.end()){
+		dout(9) << "CheckboxListDialog::on_response: setting " << j->first << " to " << (*i)->get_active() << std::endl;
+		j->second = (*i)->get_active();
+	    }
 	}
 	//~ std::transform(m_vectorpCheckButton.begin(), m_vectorpCheckButton.end(),
 		       //~ std::back_inserter(m_vectorItems), );
@@ -157,16 +161,17 @@ void CheckboxListDialog::on_response(int response_id){
 PreferencesDialog::PreferencesDialog(const Glib::ustring &filename)
 	:Gtk::Dialog("Preferences", false, true),m_config(filename),
 	 m_ColumnsDialog("Choose Columns to display", m_config.get_columns()),
+	 m_RatingsDialog("Choose Ratings to display", m_config.get_ratings()),
 	 m_numberLabel("Number of entries to get: "),
 	 m_URLLabel("URL of XML file: "),
 	 m_PlayerLabel("player command: "),
 	 m_ColumnsButton("_Columns", true),m_RatingsButton("_Ratings", true)
 {
-    dout(1) << "PreferencesDialog::PreferencesDialog(" << filename << ")" << std::endl;
+    dout(7) << "PreferencesDialog::PreferencesDialog(" << filename << ")" << std::endl;
     dout(9) << "m_URLEntry.get_width_chars(): " << m_URLEntry.get_width_chars() << std::endl;
     
     m_ColumnsButton.signal_clicked().connect(sigc::hide_return(sigc::mem_fun(m_ColumnsDialog, &CheckboxListDialog::run)));
-    //~ m_RatingsButton.signal_clicked().connect(sigc::mem_fun(m_ColumnsDialog, &CheckboxListDialog::run));
+    //~ m_RatingsButton.signal_clicked().connect(sigc::hide_return(sigc::mem_fun(m_RatingsDialog, &CheckboxListDialog::run)));
     
     /* make gui */
     //~ set_size_request(300, 200);
@@ -226,7 +231,7 @@ Glib::ustring PreferencesDialog::get_player_cmd() const {
     return m_config.get_player_cmd();
 }
 
-const Configuration::itemlist_type& PreferencesDialog::get_columns() const {
+const Configuration::itemlist_type& PreferencesDialog::get_columns() {
     return m_config.get_columns();
 }
 
