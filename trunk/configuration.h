@@ -1,5 +1,7 @@
 
 //~ #include <map>
+#include <vector>
+#include <utility>
 #include <stdexcept>
 
 #include <libxml++/libxml++.h>
@@ -12,76 +14,44 @@
 
 class Configuration{
     public:
-	Configuration(const Glib::ustring &file = Glib::ustring())
-	    :m_configfile(file)
-	{
-	    if(m_configfile != ""){
-		parse_config(m_configfile);
-	    }
-	    //~ for(std::map<Glib::ustring, Glib::ustring>::iterator i = configuration_data.being(); i != configuration_data.end(); i++){
-		//~ std::cout <<  << << std::endl;
-	    //~ }
-	}
+	typedef Glib::ustring string_type;
+    
+    public:
+	Configuration(const string_type &file = string_type());
 	
-	void parse_config(const Glib::ustring &file = Glib::ustring()){
-	    
-	    if (file == ""){
-		if (m_configfile == "")
-		    throw std::runtime_error("No configfile specified");
-	    }else{
-		m_configfile = file;
-	    }
-	    
-	    /* check to see if configfile exists, if not create it */
-	    if(!file_exists(m_configfile)){
-		return;
-	    }
-	    
-	    std::cout << "Parsing configfile: " << m_configfile << std::endl;
-	    
-	    m_xmldocument.parse_file(m_configfile);
-	    
-	    xmlpp::Document *doc = m_xmldocument.get_document();
-	    
-	    xmlpp::Element *cur_element = doc->get_root_node();
-	    
-	    std::cout << "path: " << cur_element->get_path() << std::endl;
-	    
-	    xmlpp::Node::NodeList playlists = cur_element->get_children(std::string("playlist"));
-	    
-	    if (playlists.size() != 1){
-		std::cout << "0 or more than 1 playlists: " << playlists.size() << std::endl;
-		throw std::runtime_error("Incorrect Number of playlists");
-	    }
-	    
-	    // points to playlist element
-	    cur_element = static_cast<xmlpp::Element *>(*(playlists.begin()));
-	    
-	    xmlpp::Element::AttributeList attrlist = cur_element->get_attributes();
-	    
-	    xmlpp::Element::AttributeList::iterator i = attrlist.begin();
-	    for(;i != attrlist.end(); i++){
-		std::cout << "Name: " << (*i)->get_name() << ", Value: " << (*i)->get_value() << std::endl;
-	    }
-	    
-	    xmlpp::NodeSet nset = cur_element->find(std::string("entry"));
-	    
-	}
+	void parse_config(const string_type &file = string_type());
+	//~ void save_config(const string_type &file = string_type());
+	void save_config();
 	
-	Glib::ustring operator [](const Glib::ustring& k){
+	//~ Glib::ustring operator [](const string_type& k){
 	    
-	    return configuration_data[k];
-	}
+	    //~ return configuration_data[k];
+	//~ }
     
     private:
-	void _parse_config(){
-	    
-	}
+	void _parse_player_cmd(xmlpp::Element * const);
+	void _parse_url(xmlpp::Element * const);
+	void _parse_cache_pls(xmlpp::Element * const);
+	void _parse_columns(xmlpp::Element * const);
+	void _parse_ratings(xmlpp::Element * const);
+    
+    private:
+	static void (Configuration::*_parse_fun_array[])(xmlpp::Element *);
     
     private:
 	Glib::ustring m_configfile;
+	Glib::ustring m_player_cmd;
+	Glib::ustring m_url;
+	Glib::ustring m_num_entries;
 	
-	std::map<Glib::ustring, Glib::ustring> configuration_data;
+	bool m_cache_pls;
+	
+	std::vector<std::pair<string_type, bool> > m_columns;
+	std::vector<std::pair<string_type, bool> > m_ratings;
+	//~ __gnu_cxx::hash_set<string_type> columns;
+	//~ __gnu_cxx::hash_set<string_type> ratings;
+	
+	//~ std::map<string_type, string_type> configuration_data;
     
 	xmlpp::DomParser             m_xmldocument;
 };
