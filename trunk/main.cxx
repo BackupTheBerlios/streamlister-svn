@@ -70,6 +70,7 @@ class MainWindow : public Gtk::Window {
 	void _save_as();
 	void _do_nothing();
     
+	void _get_playlist();
 	void _get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn* column);
     
 	void _make_tmp_filename();
@@ -114,7 +115,6 @@ class MainWindow : public Gtk::Window {
 	ErrorDialog            m_NoStationsErrorDialog;
 	StationSelectionDialog m_SelectStationSSDialog;
 	
-	Configuration m_config;
 	Playlist playlist_data;
 	Glib::ustring m_current_genre_filter;
 	Glib::ustring m_current_search_filter;
@@ -126,10 +126,13 @@ class MainWindow : public Gtk::Window {
 
 
 MainWindow::MainWindow(int argc, char *argv[])
-     :m_config(DEFAULT_CONFIG_PATH),
+     :m_PreferencesDialog(DEFAULT_CONFIG_PATH),
       m_NoStationsErrorDialog("This station has no channels, please choose another.")
 {
     // add option parsing stuff, need do have debug and help
+    
+    // initialize curlpp
+    curlpp::initialize();
     
     // Sets the border width of the window.
     set_title("streamlistings");
@@ -137,7 +140,10 @@ MainWindow::MainWindow(int argc, char *argv[])
     set_default_size(700, 700); // asking
     set_size_request(300, 100); // commanding
     
-    _make_tmp_filename();
+    // get the stream listings
+    _get_playlist();
+    
+    //~ _make_tmp_filename();
     //~ m_shoucast_url = Glib::ustring(SHOUTCAST_URL);
     
     // make columns
@@ -159,9 +165,6 @@ MainWindow::MainWindow(int argc, char *argv[])
     add(m_MainContentVBox);
     
     show_all_children();
-    
-    // initialize curlpp
-    curlpp::initialize();
     
     // load data into tree widget
     load_data();
@@ -187,62 +190,10 @@ MainWindow::~MainWindow(){
     }
     
     /* save prefs */
-    m_config.save_config();
+    m_PreferencesDialog.save();
 }
 
 void MainWindow::load_data(){
-    bool finvalid = false;
-    Glib::ustring shoutcast_url = m_PreferencesDialog.get_url();
-    
-    /* make this configurable */
-    dout(6) << "### m_shoucast_url = " << shoutcast_url << std::endl;
-    curlpp::memory_trait body_memory_trait;
-    //~ do{
-	try
-	{
-	    // grab new playlist
-	    //~ std::ofstream file( m_tmp_filename.c_str() );
-	    //~ curlpp::ostream_trait body_trait( &file );
-	    curlpp::output_null_trait header_null_trait; // don't care about the headers
-	    
-	    curlpp::http_easy h_httpeasy;
-	    h_httpeasy.verbose(false);
-	    h_httpeasy.follow_location(false);
-	    h_httpeasy.no_body(false);
-	    h_httpeasy.header(false);
-	    h_httpeasy.user_agent("User-Agent:Winamp/5.0");
-	    h_httpeasy.http_version(curlpp::http_version::v1_0);
-	    h_httpeasy.url(shoutcast_url);
-	    
-	    h_httpeasy.m_body_storage.trait(&body_memory_trait);
-	    h_httpeasy.m_header_storage.trait(&header_null_trait);
-	    
-	    h_httpeasy.perform();
-	}
-	catch ( curlpp::exception & e )
-	{
-	    dout(3) << ("+++CURLPP::ERROR : "  __FILE__ ":") << __LINE__ << ": " << e.what() << std::endl;
-	    //~ continue;
-	}
-    
-	// parse xml tv listing
-	try{
-	    //~ playlist_data.parse_file(m_tmp_filename);
-	    playlist_data.parse_memory(body_memory_trait.string());
-	}catch(xmlpp::exception e){
-	    //~ dout(3) << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
-	    dout(3) << "ERROR parsing streamlisting" << std::endl;
-	    dout(9) << body_memory_trait.string() << std::endl;
-	    //~ continue;
-	}catch(std::runtime_error e){
-	    if(Glib::ustring(e.what()) == Glib::ustring("Incorrect Number of playlists")){
-		dout(3) << "Incorrect Number of playlists" << std::endl;
-		//~ continue;
-	    }
-	    throw;
-	}
-    //~ }while(finvalid);
-    
     // clear what ever was in the list store
     m_ListStoreRef->clear();
     _populate_liststore();
@@ -307,7 +258,7 @@ Gtk::Widget* MainWindow::_create_menu(){
     m_refActionGroup->add( Gtk::Action::create("FileMenu", "File") );
     m_refActionGroup->add( Gtk::Action::create("FileNew", Gtk::Stock::NEW) ); //Sub-menu.
     m_refActionGroup->add( Gtk::Action::create("FileSavePrefs", Gtk::Stock::SAVE, "_Save Prefs"),
-	sigc::mem_fun(m_config, &Configuration::save_config) );
+	sigc::mem_fun(m_PreferencesDialog, &PreferencesDialog::save) );
     m_refActionGroup->add( Gtk::Action::create("FileSaveAs", Gtk::Stock::SAVE_AS),
 	Gtk::AccelKey::AccelKey('s', Gdk::CONTROL_MASK | Gdk::SHIFT_MASK),
 	sigc::mem_fun(*this, &MainWindow::_save_as) );
@@ -588,6 +539,62 @@ void MainWindow::_save_as(){
 }
 
 void MainWindow::_do_nothing(){}
+
+void MainWindow::_get_playlist(){
+    dout(7) << "MainWindow::_get_playlist()" << std::endl;
+    
+    bool finvalid = false;
+    Glib::ustring shoutcast_url = m_PreferencesDialog.get_url();
+    
+    /* make this configurable */
+    dout(6) << "### m_shoucast_url = " << shoutcast_url << std::endl;
+    curlpp::memory_trait body_memory_trait;
+    //~ do{
+	try
+	{
+	    // grab new playlist
+	    //~ std::ofstream file( m_tmp_filename.c_str() );
+	    //~ curlpp::ostream_trait body_trait( &file );
+	    curlpp::output_null_trait header_null_trait; // don't care about the headers
+	    
+	    curlpp::http_easy h_httpeasy;
+	    h_httpeasy.verbose(false);
+	    h_httpeasy.follow_location(false);
+	    h_httpeasy.no_body(false);
+	    h_httpeasy.header(false);
+	    h_httpeasy.user_agent("User-Agent:Winamp/5.0");
+	    h_httpeasy.http_version(curlpp::http_version::v1_0);
+	    h_httpeasy.url(shoutcast_url);
+	    
+	    h_httpeasy.m_body_storage.trait(&body_memory_trait);
+	    h_httpeasy.m_header_storage.trait(&header_null_trait);
+	    
+	    h_httpeasy.perform();
+	}
+	catch ( curlpp::exception & e )
+	{
+	    dout(3) << ("+++CURLPP::ERROR : "  __FILE__ ":") << __LINE__ << ": " << e.what() << std::endl;
+	    //~ continue;
+	}
+    
+	// parse xml tv listing
+	try{
+	    //~ playlist_data.parse_file(m_tmp_filename);
+	    playlist_data.parse_memory(body_memory_trait.string());
+	}catch(xmlpp::exception e){
+	    //~ dout(3) << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
+	    dout(3) << "ERROR parsing streamlisting" << std::endl;
+	    dout(9) << body_memory_trait.string() << std::endl;
+	    //~ continue;
+	}catch(std::runtime_error e){
+	    if(Glib::ustring(e.what()) == Glib::ustring("Incorrect Number of playlists")){
+		dout(3) << "Incorrect Number of playlists" << std::endl;
+		//~ continue;
+	    }
+	    throw;
+	}
+    //~ }while(finvalid);
+}
 
 void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn* column){
     dout(7) << "MainWindow::_get_playlistfile()" << std::endl;
