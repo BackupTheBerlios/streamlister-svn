@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([streamlister], [0.1], [crass@users.berlios.de])
+AC_INIT([streamlister], [0.2], [crass@users.berlios.de])
 AC_CONFIG_SRCDIR([playlist.cxx])
 # AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([no-define dist-bzip2])
