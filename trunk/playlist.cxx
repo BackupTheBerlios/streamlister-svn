@@ -120,14 +120,14 @@ Playlist::Playlist(const std::string &file){
 void Playlist::clear() { m_numEntries = 0; m_label = ""; 
     m_entries.clear(); m_genre_list.clear(); }
 
-bool Playlist::parse_file(const std::string & file){
+void Playlist::parse_file(const std::string & file){
     
     std::string filename(file);
     if (filename == ""){
 	if (m_filename != "")
 	    filename = m_filename;
 	else
-	    return false;
+	    throw std::runtime_error("No file specified");
     }
     
     std::cout << "Parsing file: " << filename << std::endl;
@@ -144,7 +144,7 @@ bool Playlist::parse_file(const std::string & file){
     
     if (playlists.size() != 1){
 	std::cout << "0 or more than 1 playlists: " << playlists.size() << std::endl;
-	return false;
+	throw std::runtime_error("Incorrect Number of playlists");
     }
     
     // points to playlist element
@@ -159,13 +159,14 @@ bool Playlist::parse_file(const std::string & file){
     
     xmlpp::NodeSet nset = cur_element->find(std::string("entry"));
     
-    __gnu_cxx::hash_set<std::string, __gnu_cxx::hash<std::string> > genre_hashset;
+    __gnu_cxx::hash_set<std::string, __gnu_cxx::hash<std::string> > genre_hashset, ratings_hashset;
     
-    // loop over all entry nodes, putting them into antry list, aand making hash_set of genres
+    // loop over all entry nodes, putting them into entry list, and making hash_set of genres
     for(xmlpp::NodeSet::iterator j = nset.begin(); j != nset.end(); j++){
 	m_entries.push_back(PlaylistEntry((static_cast<xmlpp::Element *>(*j))));
 	//~ std::cout << entries.rbegin()->get_genre() << std::endl;
 	genre_hashset.insert(m_entries.rbegin()->get_data("Genre"));
+	ratings_hashset.insert(m_entries.rbegin()->get_data("Rating"));
 	//~ std::cout << *(entries.rbegin());
     }
     
@@ -174,17 +175,18 @@ bool Playlist::parse_file(const std::string & file){
     //~ for(__gnu_cxx::hash_set<std::string>::iterator i = genre_hashset.begin();
 	//~ i != genre_hashset.end(); genre_list_unsorted.push_back(*i), i++);
     m_genre_list.resize(genre_hashset.size());
-    std::partial_sort_copy<__gnu_cxx::hash_set<std::string, __gnu_cxx::hash<std::string> >::iterator,
-		      std::vector<std::string>::iterator>
-	(genre_hashset.begin(), genre_hashset.end(),
-	 m_genre_list.begin(), m_genre_list.end());
+    std::partial_sort_copy(genre_hashset.begin(), genre_hashset.end(),
+			   m_genre_list.begin(), m_genre_list.end());
     
-    //~ std::cout << "genre_list.size() = " << genre_list.size() << std::endl;
-    //~ for(std::vector<std::string>::iterator i = genre_list.begin(); i != genre_list.end(); i++){
-	//~ std::cout << *i << std::endl;
-    //~ }
+    /* also sort ratings */
+    m_ratings.resize(ratings_hashset.size());
+    std::partial_sort_copy(ratings_hashset.begin(), ratings_hashset.end(),
+			   m_ratings.begin(), m_ratings.end());
     
-    return true;
+    std::cout << "m_ratings.size() = " << m_ratings.size() << std::endl;
+    for(std::vector<Glib::ustring>::iterator i = m_ratings.begin(); i != m_ratings.end(); i++){
+	std::cout << *i << std::endl;
+    }
 }
 
 bool Playlist::saveto_file(const std::string &filename){

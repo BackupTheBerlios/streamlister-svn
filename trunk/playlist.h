@@ -25,6 +25,7 @@
 
 #include <cstdlib>
 #include <cassert>
+#include <stdexcept>
 
 #include <iostream>
 
@@ -84,18 +85,18 @@ class Playlist{
 	
 	void clear();
 	
-	bool parse_file(const std::string & = std::string());
+	void parse_file(const std::string & = std::string());
 	//~ bool saveto_file(const std::string & = std::string());
 	bool saveto_file(const std::string &);
 	
-	const std::vector<std::string>& get_genres() const{
+	const std::vector<Glib::ustring>& get_genres() const{
 	    return m_genre_list;
 	}
 	
 	const std::vector<Glib::ustring>& get_properties() const {
 	    return m_properties;
 	}
-	
+    
     private:
 	std::vector<Glib::ustring>   m_properties; // FIXME: hack!!!
 	
@@ -103,7 +104,8 @@ class Playlist{
 	std::string                  m_label;
 	std::string                  m_filename;
 	std::vector<PlaylistEntry>   m_entries;
-	std::vector<std::string>     m_genre_list;
+	std::vector<Glib::ustring>   m_genre_list;
+	std::vector<Glib::ustring>   m_ratings;
 	
 	//~ xmlpp::Document              m_xmldocument;
 	xmlpp::DomParser             m_xmldocument;
