@@ -73,7 +73,7 @@ StationSelectionDialog::StationSelectionDialog()
 int StationSelectionDialog::run(const std::vector<Glib::ustring>& titles){
     // put titles in the model
     for(std::vector<Glib::ustring>::const_iterator i = titles.begin(); i != titles.end(); i++){
-	std::cout << "Adding Title: " << *i << std::endl;
+	dout(8) << "Adding Title: " << *i << std::endl;
 	Gtk::TreeModel::iterator iter = m_ListStoreRef->append();
 	(*iter)[m_TitleColumn] = *i;
     }
@@ -89,11 +89,11 @@ void StationSelectionDialog::on_response(int response_id){
 }
 
 void StationSelectionDialog::_ok_clicked(){
-    std::cout << "StationSelectionDialog::_get_selection()" << std::endl;
+    dout(7) << "StationSelectionDialog::_get_selection()" << std::endl;
     Gtk::TreeModel::Path selected_path;
     Gtk::TreeViewColumn* focus_col;
     m_TitleView.get_cursor(selected_path, focus_col);
-    std::cout << "Selected Path = " << selected_path.to_string() << std::endl;
+    dout(8) << "Selected Path = " << selected_path.to_string() << std::endl;
     Gtk::Dialog::response(atoi(selected_path.to_string().c_str()));
 }
 
