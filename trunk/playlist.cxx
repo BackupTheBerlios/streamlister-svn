@@ -132,9 +132,9 @@ bool Playlist::parse_file(const std::string & file){
     
     std::cout << "Parsing file: " << filename << std::endl;
     
-    xmlpp::DomParser tvlist_xml_doc(filename, false);
+    m_xmldocument.parse_file(filename);
     
-    xmlpp::Document *doc = tvlist_xml_doc.get_document();
+    xmlpp::Document *doc = m_xmldocument.get_document();
     
     xmlpp::Element *cur_element = doc->get_root_node();
     
@@ -184,6 +184,12 @@ bool Playlist::parse_file(const std::string & file){
 	//~ std::cout << *i << std::endl;
     //~ }
     
+    return true;
+}
+
+bool Playlist::saveto_file(const std::string &filename){
+    //~ m_xmldocument.get_document()->write_to_file(filename);
+    m_xmldocument.get_document()->write_to_file_formatted(filename);
     return true;
 }
 

@@ -17,6 +17,12 @@
 #ifndef __PLAYLIST_H__
 #define __PLAYLIST_H__
 
+#define CURL_SYSTEM "curl -0 -A 'User-Agent:Winamp/5.0' 'http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2' -o nsv_tvlisting"
+//~ #define SHOUTCAST_URL "http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2"
+#define SHOUTCAST_URL "http://www.shoutcast.com/sbin/tvlister.phtml?limit=%s&service=winamp2&no_compress=1"
+#define PLAYER_CMD "mplayer -v -nocache '%s'"
+#define DEFAULT_NUMBER_ENTRIES "500"
+
 #include <cstdlib>
 #include <cassert>
 
@@ -79,6 +85,8 @@ class Playlist{
 	void clear();
 	
 	bool parse_file(const std::string & = std::string());
+	//~ bool saveto_file(const std::string & = std::string());
+	bool saveto_file(const std::string &);
 	
 	const std::vector<std::string>& get_genres() const{
 	    return m_genre_list;
@@ -96,6 +104,9 @@ class Playlist{
 	std::string                  m_filename;
 	std::vector<PlaylistEntry>   m_entries;
 	std::vector<std::string>     m_genre_list;
+	
+	//~ xmlpp::Document              m_xmldocument;
+	xmlpp::DomParser             m_xmldocument;
 };
 
 
