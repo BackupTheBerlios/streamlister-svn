@@ -29,8 +29,15 @@
 #include <string>
 
 #include <gtkmm.h>
-#include <curlpp/curlpp.hpp>
-#include <curlpp/http_easy.hpp>
+
+#ifdef HAVE_LIBCURLPP_DEV
+# include <curlpp/cURLpp.hpp>
+# include <curlpp/Options.hpp>
+# include <curlpp/Exception.hpp>
+#else
+# include <curlpp/curlpp.hpp>
+# include <curlpp/http_easy.hpp>
+#endif /* HAVE_LIBCURLPP_DEV */
 
 //~ #include <boost/filesystem/operations.hpp>
 
@@ -121,6 +128,11 @@ class MainWindow : public Gtk::Window {
 	Glib::ustring m_tmp_filename;
 	//~ Glib::ustring m_shoucast_url;
 	Glib::ustring m_player_cmd;
+	
+#ifdef HAVE_LIBCURLPP_DEV
+	// cURLpp stuff
+	cURLpp::Cleanup myCleanup;
+#endif
 
 };
 
@@ -131,8 +143,10 @@ MainWindow::MainWindow(int argc, char *argv[])
 {
     // add option parsing stuff, need do have debug and help
     
+#ifndef HAVE_LIBCURLPP_DEV
     // initialize curlpp
     curlpp::initialize();
+#endif
     
     // Sets the border width of the window.
     set_title("streamlistings");
@@ -172,8 +186,10 @@ MainWindow::MainWindow(int argc, char *argv[])
 
 MainWindow::~MainWindow(){
     dout(7) << "MainWindow::~MainWindow()" << std::endl;
+#ifndef HAVE_LIBCURLPP_DEV
     // cleanup curlpp
     curlpp::terminate();
+#endif
     
     // kill temp file if it exists
     //~ struct stat temp_buf;
@@ -554,6 +570,45 @@ void MainWindow::_get_playlist(){
     
     /* make this configurable */
     dout(6) << "### m_shoucast_url = " << shoutcast_url << std::endl;
+    size_t len = 0;
+#ifdef HAVE_LIBCURLPP_DEV
+    std::string buffer;
+    try
+    {
+	cURLpp::Easy request;
+	
+	using namespace cURLpp::Options;
+	request.setOpt(new Verbose(false));
+	request.setOpt(new FollowLocation(false));
+	request.setOpt(new NoBody(false));
+	request.setOpt(new Header(false));
+	request.setOpt(new UserAgent("User-Agent:Winamp/5.0"));
+	request.setOpt(new HttpVersion(cURL::CURL_HTTP_VERSION_1_0));
+	request.setOpt(new Url(shoutcast_url));
+	
+	request.setOpt(new WriteFunction(write_data));
+	request.setOpt(new WriteData(&buffer));
+	//~ cURLpp::Options::StorageOption<> body_memory_trait;
+	//~ cURLpp::Options::StorageOption< cURLpp::cURL::curl_read_callback,
+	
+	//~ cURLpp::Options::StorageOption< sigc::slot<size_t, char*, size_t, size_t, void*>,
+					//~ void *,
+					//~ cURL::CURLOPT_READFUNCTION,
+					//~ cURL::CURLOPT_READDATA > readCallback;
+	//~ readCallback.setCallback(sigc::mem_fun(*this, &MainWindow::_read_data));
+	//~ readCallback.setData(&buffer);
+	//~ request.setOpt(readCallback);
+	
+	request.perform();
+    }catch ( cURLpp::LogicError & e ){
+       std::cout << e.what() << std::endl;
+    }catch ( cURLpp::RuntimeError & e ){
+       std::cout << e.what() << std::endl;
+    }
+    
+    char *pbuffer = const_cast<char *>(buffer.data());
+    len = buffer.length();
+#else
     curlpp::memory_trait body_memory_trait;
     //~ do{
 	try
@@ -584,15 +639,17 @@ void MainWindow::_get_playlist(){
 	}
 	
 	char *pbuffer = (char*)body_memory_trait.buffer();
-	std::auto_ptr<char> ap;
+	len = body_memory_trait.length();
+#endif
 	
 #ifdef HAVE_LIBZ
+	std::auto_ptr<char> ap;
 	dout(1) << "Doing prelim check for xml format" << std::endl;
 	// preliminary xml format check, if not try to inflate using zlib
 	if(Glib::ustring(pbuffer, 5) != Glib::ustring("<?xml")){
 	    dout(1) << "Not XML, trying to deflate ..." << std::endl;
 	    
-	    ap = decompress(pbuffer, body_memory_trait.length());
+	    ap = decompress(pbuffer, len);
 	    if(!ap.get()){
 		dout(3) << "NULL decompression buffer returned (see above error)" << std::endl;
 		return;
@@ -613,7 +670,7 @@ void MainWindow::_get_playlist(){
 	}catch(xmlpp::exception e){
 	    //~ dout(3) << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
 	    dout(3) << "ERROR parsing streamlisting" << std::endl;
-	    dout(9) << body_memory_trait.string() << std::endl;
+	    dout(9) << pbuffer << std::endl;
 	    //~ continue;
 	}catch(std::runtime_error e){
 	    if(Glib::ustring(e.what()) == Glib::ustring("Incorrect Number of playlists")){
@@ -651,6 +708,30 @@ void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeVi
 	dout(8) << "  playstring = " << playstring << " (" << m_PlaylistView.get_model()->get_n_columns()-1 << ")" << std::endl;
 	
 	Glib::ustring body;
+#ifdef HAVE_LIBCURLPP_DEV
+	try
+	{
+	    cURLpp::Easy request;
+	    
+	    using namespace cURLpp::Options;
+	    request.setOpt(new Verbose(false));
+	    request.setOpt(new FollowLocation(false));
+	    request.setOpt(new NoBody(false));
+	    request.setOpt(new Header(false));
+	    request.setOpt(new UserAgent("User-Agent:Winamp/5.0"));
+	    request.setOpt(new HttpVersion(cURL::CURL_HTTP_VERSION_1_0));
+	    request.setOpt(new Url(playstring));
+	    
+	    request.setOpt(new WriteFunction(write_data));
+	    request.setOpt(new WriteData(&body));
+	    
+	    request.perform();
+	}catch ( cURLpp::LogicError & e ){
+	   std::cout << e.what() << std::endl;
+	}catch ( cURLpp::RuntimeError & e ){
+	   std::cout << e.what() << std::endl;
+	}
+#else
 	try
 	{
 	    // get the real url
@@ -686,6 +767,7 @@ void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeVi
 	{
 	  dout(3) << "+++CURLPP::ERROR : " << e.what() << std::endl;
 	}
+#endif
 	
 	PlaylistFile plsfile(body);
 	
@@ -793,7 +875,6 @@ bool MainWindow::_genre_filter(const Gtk::TreeModel::const_iterator& iter){
 bool MainWindow::_rating_filter(const Gtk::TreeModel::const_iterator& iter){
     return true;
 }
-
 
 int main(int argc, char *argv[]){
     //~ dout.set_debug_level(9);
