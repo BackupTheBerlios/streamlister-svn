@@ -1,0 +1,56 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ(2.59)
+AC_INIT([streamlister], [0.1], [crass@users.berlios.de])
+AC_CONFIG_SRCDIR([playlist.cxx])
+# AC_CONFIG_HEADER([config.h])
+AM_INIT_AUTOMAKE([no-define dist-bzip2])
+
+# Checks for programs.
+AC_PROG_CXX
+AC_PROG_CC
+
+# Checks for libraries.
+
+# Checks for header files.
+AC_CHECK_HEADERS([unistd.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_HEADER_STDBOOL
+AC_C_CONST
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+
+# Checks for library functions.
+AC_FUNC_STAT
+
+# Checks for required packages.
+PKG_CHECK_MODULES([GTKMM], [gtkmm-2.4 >= 2.4.7], [], [])
+PKG_CHECK_MODULES([LIBXMLPP], [libxml++-2.6 >= 2.6.1], [], [])
+dnl PKG_CHECK_MODULES([CURLPP], [curlpp >= 0.3.1], [], [])
+
+dnl Only need this till curlpp project make a pkg-config module
+AC_CHECK_PROG([CURLPP_CONFIG], [curlpp-config], [yes], [no])
+if test "x$CURLPP_CONFIG" = "xyes"; then
+    CURLPP_VERSION=`curlpp-config --version`
+    if test "x$CURLPP_VERSION" = "xlibcurlpp 0.3.1"; then
+	AC_MSG_CHECKING(CURLPP_CFLAGS)
+	CURLPP_CFLAGS=`curlpp-config --cflags`
+	AC_MSG_RESULT($CURLPP_CFLAGS)
+	
+	AC_MSG_CHECKING(CURLPP_LIBS)
+	CURLPP_LIBS=`curlpp-config --libs`
+	AC_MSG_RESULT($CURLPP_LIBS)
+    else
+	AC_MSG_ERROR([need curlpp version 0.3.1, have $CURLPP_VERSION], [-1])
+    fi
+else
+    AC_MSG_ERROR([curlpp-config not found, please install curlpp package], [-1])
+fi;dnl
+AC_SUBST(CURLPP_CFLAGS)
+AC_SUBST(CURLPP_LIBS)
+
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

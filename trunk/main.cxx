@@ -1,0 +1,555 @@
+/* Copyright (C) 2004  crass <crass@users.berlios.de>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include <cstdlib>
+#include <cassert>
+
+#include <iostream>
+#include <fstream>
+
+#include <string>
+#include <ext/hash_set>
+#include <ext/hash_map>
+
+#include <gtkmm.h>
+#include <curlpp/curlpp.hpp>
+#include <curlpp/http_easy.hpp>
+
+//~ #include <boost/filesystem/operations.hpp>
+
+#include "dialog_boxes.h"
+#include "playlist.h"
+#include "playlist_widgets.h"
+
+#define curl_system "curl -0 -A 'User-Agent:Winamp/5.0' 'http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2' -o nsv_tvlisting"
+//~ #define shoutcast_url "http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2"
+#define shoutcast_url "http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2&no_compress=1"
+
+class MainWindow : public Gtk::Window {
+    public:
+	MainWindow(const Glib::ustring &filename);
+	virtual ~MainWindow();
+	
+	void load_data();
+	void reload();
+	void search();
+	void genre_filter();
+    
+    private:
+	
+	Gtk::Widget* _create_menu();
+	Gtk::Widget* _create_topbar();
+	Gtk::Widget* _create_liststore();
+    
+	void _populate_liststore();
+	void _populate_genrefilter();
+	void _reset_columns();
+	void _create_columns();
+	void _do_nothing();
+    
+	void _make_tmp_filename();
+    
+	bool _playlist_filter(const Gtk::TreeModel::const_iterator& iter);
+	bool _search_filter(const Gtk::TreeModel::const_iterator& iter);
+	bool _genre_filter(const Gtk::TreeModel::const_iterator& iter);
+	bool _rating_filter(const Gtk::TreeModel::const_iterator& iter);
+    
+    protected:
+	
+	//Member widgets:
+	// Menu widgets:
+	Gtk::Button m_ReloadButton;
+	Gtk::VBox m_MainContentVBox;
+	Glib::RefPtr<Gtk::UIManager> m_refUIManager;
+	Glib::RefPtr<Gtk::ActionGroup> m_refActionGroup;
+	
+	// Option widgets:
+	Gtk::HBox OptionsHBox;
+	std::vector <Gtk::VSeparator*> m_OptionSeparators;
+	Gtk::Entry m_SearchEntry;
+	Gtk::Button m_SearchButton;
+	Gtk::Label m_GenreLabel;
+	Gtk::ComboBoxText m_GenreCombo;
+	
+	// List widgets:
+	Gtk::ScrolledWindow m_ScrolledWindow;
+	PlaylistColumns<Glib::ustring> m_Columns;
+	//~ Gtk::ListStore liststore;
+	Glib::RefPtr<Gtk::TreeModelFilter> m_TreeModelFilterRef;
+	Glib::RefPtr<Gtk::ListStore> m_ListStoreRef;
+	//~ Gtk::TreeView m_PlaylistView;
+	PlaylistView m_PlaylistView;
+	
+	// Dialog boxes
+	AboutDialog m_AboutDialog;
+	
+	Playlist playlist_data;
+	Glib::ustring m_current_genre_filter;
+	Glib::ustring m_current_search_filter;
+	Glib::ustring m_tmp_filename;
+	Glib::ustring m_shoucast_url;
+
+};
+
+
+MainWindow::MainWindow(const Glib::ustring &filename):playlist_data(filename) {
+    
+    // Sets the border width of the window.
+    set_title("tvlistings");
+    set_border_width(5);
+    set_default_size(700, 700); // asking
+    set_size_request(300, 100); // commanding
+    
+    _make_tmp_filename();
+    m_shoucast_url = Glib::ustring(shoutcast_url);
+    
+    // make columns
+    for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
+	//~ cout << "adding column to colgroup: " << *i << std::endl;
+	m_Columns.add(*i);
+    }
+    
+    Gtk::Widget* pwMenu = _create_menu();
+    Gtk::Widget* pwTopBar = _create_topbar();
+    Gtk::Widget* pwPlaylist = _create_liststore();
+    
+    // add widgets
+    if(pwMenu)
+	m_MainContentVBox.pack_start(*pwMenu, Gtk::PACK_SHRINK);
+    m_MainContentVBox.pack_start(*pwTopBar, Gtk::PACK_SHRINK, 3 /* padding */);
+    m_MainContentVBox.add(*pwPlaylist);
+    
+    add(m_MainContentVBox);
+    
+    show_all_children();
+    
+    // initialize curlpp
+    curlpp::initialize();
+    
+    // load data into tree widget
+    load_data();
+}
+
+MainWindow::~MainWindow(){
+    std::cout << "MainWindow::~MainWindow()" << std::endl;
+    // cleanup curlpp
+    curlpp::terminate();
+    
+    // kill temp file if it exists
+    struct stat temp_buf;
+    if(stat(m_tmp_filename.c_str(), &temp_buf) != -1){
+	if(unlink(m_tmp_filename.c_str()) == -1){
+	    std::cerr << "Unable to unlink(): " << m_tmp_filename.c_str() << std::endl;
+	}
+    }
+}
+
+void MainWindow::load_data(){
+    // empty the old playlist
+    playlist_data.clear();
+    
+    std::cout << "### m_shoucast_url = " << m_shoucast_url << std::endl;
+    try
+    {
+	// grab new playlist
+	std::ofstream file( m_tmp_filename.c_str() );
+	curlpp::ostream_trait body_trait( &file );
+	curlpp::output_null_trait header_trait; // don't care about the headers
+	
+	curlpp::http_easy h_httpeasy;
+	h_httpeasy.verbose(false);
+	h_httpeasy.follow_location(false);
+	h_httpeasy.no_body(false);
+	h_httpeasy.header(false);
+	h_httpeasy.user_agent("User-Agent:Winamp/5.0");
+	h_httpeasy.http_version(curlpp::http_version::v1_0);
+	h_httpeasy.url(m_shoucast_url);
+	
+	h_httpeasy.m_body_storage.trait(&body_trait);
+	h_httpeasy.m_header_storage.trait(&header_trait);
+	
+	h_httpeasy.perform();
+    }
+    catch ( curlpp::exception & e )
+    {
+      std::cout << ("+++CURLPP::ERROR : "  __FILE__ ":") << __LINE__ << ": " << e.what() << std::endl;
+    }
+
+    // parse xml tv listing
+    if (!playlist_data.parse_file(m_tmp_filename)){
+	std::cout << "ERROR parsing tvlisting: " << m_tmp_filename << std::endl;
+    }
+    
+    // clear what ever was in the list store
+    m_ListStoreRef->clear();
+    _populate_liststore();
+    
+    // clear list first
+    //+++ FIXME: gtkmm design bug, ComboBoxText needs to have remove_text()
+    //  using gtk_combo_box_remove_text()
+    
+    //~ Glib::RefPtr<Gtk::TreeStore>(m_GenreCombo.get_model())->clear();
+    Glib::RefPtr<Gtk::ListStore>::cast_static(m_GenreCombo.get_model())->clear();
+    //~ while(m_GenreCombo.get_model()->get_n_columns() > 0)
+	//~ gtk_combo_box_remove_text (m_GenreCombo.gobj(), 0)
+    //~ m_GenreCombo.set_model(m_GenreCombo.get_model());
+    _populate_genrefilter();
+}
+
+void MainWindow::reload(){
+    std::cout << "MainWindow::reload()" << std::endl;
+    load_data();
+}
+
+void MainWindow::search(){
+    //~ cout << "MainWindow::search()" << std::endl;
+    m_current_search_filter = m_SearchEntry.get_text();
+    
+    m_TreeModelFilterRef->refilter();
+}
+
+void MainWindow::genre_filter(){
+    //~ cout << "MainWindow::genre_filter()" << std::endl;
+    //~ cout << "  Active Row Num: " << m_GenreCombo.get_active_row_number() << std::endl;
+    if(m_GenreCombo.get_active_row_number() > -1){
+	Glib::ustring data("");
+	m_GenreCombo.get_model()->children()[m_GenreCombo.get_active_row_number()].get_value(0, data);
+	//~ cout << "  Selected: " << *(m_GenreCombo.get_active()) << " : " << data << std::endl;
+	
+	// start filtering rows
+	m_current_genre_filter = data;
+	m_TreeModelFilterRef->refilter();
+    }
+}
+
+Gtk::Widget* MainWindow::_create_menu(){
+    std::cout << "MainWindow::_create_menu()" << std::endl;
+    //Create actions for menus and toolbars:
+    m_refActionGroup = Gtk::ActionGroup::create();
+    
+    //File|New sub menu:
+    m_refActionGroup->add( Gtk::Action::create("FileNewStandard", Gtk::Stock::NEW, "_New", "Create a new file"),
+	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+    
+    m_refActionGroup->add( Gtk::Action::create("FileNewFoo", Gtk::Stock::NEW, "New Foo", "Create a new foo"),
+	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+    
+    m_refActionGroup->add( Gtk::Action::create("FileNewGoo", Gtk::Stock::NEW, "_New Goo", "Create a new goo"),
+	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+    
+    //File menu:
+    m_refActionGroup->add( Gtk::Action::create("FileMenu", "File") );
+    m_refActionGroup->add( Gtk::Action::create("FileNew", Gtk::Stock::NEW) ); //Sub-menu.
+    m_refActionGroup->add( Gtk::Action::create("FileSaveAs", Gtk::Stock::SAVE_AS),
+	Gtk::AccelKey::AccelKey('s', Gdk::CONTROL_MASK),
+	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+    m_refActionGroup->add( Gtk::Action::create("FileQuit", Gtk::Stock::QUIT),
+	sigc::mem_fun(*this, &MainWindow::hide) );
+	//~ Gtk::Main::quit );
+    
+    //Edit menu:
+    m_refActionGroup->add( Gtk::Action::create("EditMenu", "Edit") );
+    m_refActionGroup->add( Gtk::Action::create("EditPreferences", "_Preferences"),
+	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+    
+    //Columns menu:
+    m_refActionGroup->add( Gtk::Action::create("ColumnsMenu", "Columns") );
+    for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
+	//~ std::cout << "adding action to actiongroup: " << *i << std::endl;
+	m_refActionGroup->add( Gtk::ToggleAction::create("Columns" + (*i), *i, Glib::ustring(), true),
+	    sigc::mem_fun(*this, &MainWindow::_reset_columns) );
+    }
+    
+    //Ratings menu:
+    m_refActionGroup->add( Gtk::Action::create("RatingsMenu", "Ratings") );
+    
+    //Bookmark menu:
+    m_refActionGroup->add( Gtk::Action::create("BookmarksMenu", "Bookmarks") );
+    //~ m_refActionGroup->add( Gtk::Action::create("EditSomething", "Something"),
+	//~ sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+    
+    //Help menu:
+    m_refActionGroup->add( Gtk::Action::create("HelpMenu", "Help") );
+    //~ m_refActionGroup->add( Gtk::Action::create("HelpAbout", Gtk::Stock::HELP),
+	//~ sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+    m_refActionGroup->add( Gtk::Action::create("HelpAbout", "About"),
+	sigc::mem_fun(m_AboutDialog, &AboutDialog::run) );
+    
+    m_refUIManager = Gtk::UIManager::create();
+    m_refUIManager->insert_action_group(m_refActionGroup);
+    
+    add_accel_group(m_refUIManager->get_accel_group());
+    
+    //Layout the actions in a menubar and toolbar:
+    try
+    {
+	Glib::ustring ui_info_begin = 
+	    "<ui>"
+	    "  <menubar name='MenuBar'>"
+	    "    <menu action='FileMenu'>"
+	    "      <menu action='FileNew'>"
+	    "        <menuitem action='FileNewStandard'/>"
+	    "        <menuitem action='FileNewFoo'/>"
+	    "        <menuitem action='FileNewGoo'/>"
+	    "      </menu>"
+	    "      <separator/>"
+	    "      <menuitem action='FileSaveAs'/>"
+	    "      <menuitem action='FileQuit'/>"
+	    "    </menu>"
+	    "    <menu action='EditMenu'>"
+	    "      <menuitem action='EditPreferences'/>"
+	    "    </menu>"
+	    "    <menu action='ColumnsMenu'>";
+	
+	Glib::ustring ui_info_columns; 
+	for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
+	    //~ std::cout << "adding action to ui: " << *i << std::endl;
+	    ui_info_columns += ("      <menuitem action='Columns" + (*i) + "'/>");
+	}
+	
+	Glib::ustring ui_info_end = 
+	    "    </menu>"
+	    "    <!-- <menuitem action='ReloadMenu'/> -->"
+	    "    <menu action='BookmarksMenu'>"
+	    "      <separator/>"
+	    "      <menuitem action='HelpAbout'/>"
+	    "    </menu>"
+	    "    <menu action='HelpMenu'>"
+	    "      <menuitem action='HelpAbout'/>"
+	    "    </menu>"
+	    "  </menubar>"
+	    "  <toolbar  name='ToolBar'>"
+	    "    <toolitem action='FileNewStandard'/>"
+	    "    <toolitem action='FileQuit'/>"
+	    "  </toolbar>"
+	    "</ui>";
+	
+	
+	Glib::ustring ui_info(ui_info_begin+ui_info_columns+ui_info_end);
+	
+	m_refUIManager->add_ui_from_string(ui_info);
+    }
+    catch(const Glib::Error& ex)
+    {
+	std::cerr << "building menus failed: " <<  ex.what();
+    }
+
+    
+    //Get the menubar and toolbar widgets, and add them to a container widget:
+    Gtk::Widget* pMenubar = m_refUIManager->get_widget("/MenuBar");
+    
+    // don't want toolbar
+    //~ Gtk::Widget* pToolbar = m_refUIManager->get_widget("/ToolBar") ;
+    //~ if(pToolbar)
+	//~ m_Box.pack_start(*pToolbar, Gtk::PACK_SHRINK);
+    
+    show_all_children();
+    
+    return pMenubar;
+}
+
+Gtk::Widget* MainWindow::_create_topbar(){
+    std::cout << "MainWindow::_create_topbar()" << std::endl;
+    // reload button
+    m_ReloadButton.set_label(std::string("_Reload"));
+    m_ReloadButton.set_use_underline();
+    m_ReloadButton.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::reload));
+    //~ m_ReloadButton.set_size_request(100,50);
+    m_OptionSeparators.push_back(new Gtk::VSeparator);
+    
+    // 
+    m_OptionSeparators.push_back(new Gtk::VSeparator);
+    m_SearchButton.set_label(std::string("_Search"));
+    m_SearchButton.set_use_underline();
+    m_SearchButton.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::search));
+    
+    // set the values for the genres in the combobox
+    m_GenreLabel.set_text(std::string("Genre Filter: "));
+    m_GenreCombo.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::genre_filter));
+    m_OptionSeparators.push_back(new Gtk::VSeparator);
+    
+    std::vector<Gtk::VSeparator*>::iterator i_vs = m_OptionSeparators.begin();
+    
+    // add widgets
+    //~ OptionsHBox.add(m_ReloadButton);
+    OptionsHBox.pack_start(m_ReloadButton, Gtk::PACK_SHRINK);
+    OptionsHBox.pack_start(**i_vs, Gtk::PACK_SHRINK, 7);
+    
+    OptionsHBox.pack_start(m_SearchEntry, Gtk::PACK_SHRINK);
+    OptionsHBox.pack_start(m_SearchButton, Gtk::PACK_SHRINK);
+    OptionsHBox.pack_start(**(++i_vs), Gtk::PACK_SHRINK, 7);
+    
+    OptionsHBox.pack_start(m_GenreLabel, Gtk::PACK_SHRINK);
+    OptionsHBox.pack_start(m_GenreCombo, Gtk::PACK_SHRINK);
+    OptionsHBox.pack_start(**(++i_vs), Gtk::PACK_SHRINK, 7);
+    
+    return &OptionsHBox;
+}
+
+Gtk::Widget* MainWindow::_create_liststore(){
+    std::cout << "MainWindow::_create_liststore()" << std::endl;
+    
+    // set columns in liststore
+    m_ListStoreRef = Gtk::ListStore::create(m_Columns);
+    m_TreeModelFilterRef = Gtk::TreeModelFilter::create(m_ListStoreRef, Gtk::TreeModel::Path() );
+    m_TreeModelFilterRef->set_visible_func(sigc::mem_fun(*this, &MainWindow::_playlist_filter));
+    
+    //~ std::cout << "GTK_IS_TREE_VIEW (m_PlaylistView.gobj()) = " << GTK_IS_TREE_VIEW (m_PlaylistView.gobj()) << std::endl;
+    
+    // make treeview
+    m_PlaylistView.set_model(m_TreeModelFilterRef);
+    
+    _create_columns();
+    
+    //Only show the scrollbars when they are necessary:
+    m_ScrolledWindow.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_ScrolledWindow.add(m_PlaylistView);
+    
+    // should be scrolled all the way left
+    // THIS doesn't work
+    //   For some reason the scrollbars seem to be postitioned correctly on start
+    
+    //~ m_ScrolledWindow.get_hadjustment()->set_value(0.0);
+    //~ m_ScrolledWindow.get_hadjustment()->changed();
+    //~ m_ScrolledWindow.get_vadjustment()->set_value(0.0);
+    //~ m_ScrolledWindow.get_vadjustment()->changed();
+    
+    // show widgets
+    m_PlaylistView.show();
+    m_ScrolledWindow.show();
+    
+    return &m_ScrolledWindow;
+}
+
+void MainWindow::_populate_liststore(){
+    std::vector<PlaylistEntry>::iterator i = playlist_data.get_entries().begin();
+    for(int id=0; i != playlist_data.get_entries().end(); i++, id++){
+	Gtk::TreeModel::iterator iter = m_ListStoreRef->append();
+	
+	// append an id column
+	(*iter)[m_Columns.get_id_column()] = id;
+	for(std::vector<Glib::ustring>::const_iterator j = m_Columns.get_column_names().begin(); j !=  m_Columns.get_column_names().end(); j++){
+	    (*iter)[m_Columns.get_column(*j)] = i->get_data(*j);
+	}
+    }
+}
+
+void MainWindow::_populate_genrefilter(){
+    m_GenreCombo.append_text(std::string("ALL"));
+    for(std::vector<std::string>::const_iterator i = playlist_data.get_genres().begin();
+	i != playlist_data.get_genres().end(); i++){
+	//~ std::cout << "Adding genre to genre filter: " << *i << std::endl;
+	m_GenreCombo.append_text(*i);
+    }
+    //~ m_GenreCombo.append_text(std::string("Last Genre"));
+    m_GenreCombo.set_active(0);
+}
+
+void MainWindow::_reset_columns(){
+    //~ std::cout << "MainWindow::_reset_columns" << std::endl;
+    m_PlaylistView.remove_all_columns();
+    
+    _create_columns();
+}
+
+void MainWindow::_create_columns(){
+    std::cout << "MainWindow::_create_columns()" << std::endl;
+    
+    // make columns visible
+    Glib::ListHandle<Glib::RefPtr<Gtk::Action> > m_ColumnsActions = m_refActionGroup->get_actions();
+    
+    // Goes through all actions and checks that way: BAD!
+    //~ std::cout << "MainWindow::_reset_columns(): removed columns, now setting them" << std::endl;
+    //~ for(Glib::ListHandle<Glib::RefPtr<Gtk::Action> >::iterator i = m_ColumnsActions.begin(); i != m_ColumnsActions.end(); i++){
+	//~ if((*i)->get_name().compare(0, 7, "Columns") == 0 &&
+		//~ (*i)->get_name() != "ColumnsMenu" &&
+		//~ (Glib::RefPtr<Gtk::ToggleAction>::cast_static(*i))->get_active()){
+	    //~ Glib::ustring columnName = (*i)->get_name().substr(7);
+	    //~ std::cout << "appending column: " << columnName << std::endl;
+	    //~ m_PlaylistView.append_column(columnName, m_Columns.get_column(columnName));
+	//~ }
+    //~ }
+    
+    for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
+    //~ for(Glib::ListHandle<Glib::RefPtr<Gtk::Action> >::iterator i = m_ColumnsActions.begin(); i != m_ColumnsActions.end(); i++){
+	Glib::RefPtr<Gtk::Action> refAction = m_refActionGroup->get_action(Glib::ustring("Columns") + (*i));
+	if(refAction && (Glib::RefPtr<Gtk::ToggleAction>::cast_static(refAction))->get_active()){
+	    //~ Glib::ustring columnName = (*i)->get_name().substr(7);
+	    std::cout << "appending column: " << (*i) << "(" << (&m_Columns.get_column(*i)) << ")" << std::endl;
+	    m_PlaylistView.append_column(*i, m_Columns.get_column(*i));
+	}
+    }
+    
+    // make columns resizeable
+    Glib::ListHandle<Gtk::TreeViewColumn*> m_ViewColumnList = m_PlaylistView.get_columns();
+    for(Glib::ListHandle<Gtk::TreeViewColumn*>::iterator i = m_ViewColumnList.begin(); i != m_ViewColumnList.end(); i++){
+	(*i)->set_resizable();
+    }
+}
+
+void MainWindow::_do_nothing(){}
+
+void MainWindow::_make_tmp_filename(){
+    pid_t mypid = getpid();
+    // FIXME: get progname dynamically
+    std::ostringstream oss;
+    oss << Glib::ustring("/tmp/tvlister.") << mypid;
+    m_tmp_filename = oss.str();
+    std::cout << "  m_tmp_filename = " << m_tmp_filename << std::endl;
+}
+
+bool MainWindow::_playlist_filter(const Gtk::TreeModel::const_iterator& iter){
+    return _genre_filter(iter) && _search_filter(iter) && _rating_filter(iter);
+}
+
+bool MainWindow::_search_filter(const Gtk::TreeModel::const_iterator& iter){
+    if(m_current_search_filter == "")
+	return true;
+    if(iter->get_value(m_Columns.get_column("Name")).find(m_current_search_filter) != std::string::npos)
+	return true;
+    return false;
+}
+
+bool MainWindow::_genre_filter(const Gtk::TreeModel::const_iterator& iter){
+    // if filter == ALL then all rows visible
+    if(m_current_genre_filter == "ALL")
+	return true;
+    if(m_current_genre_filter == iter->get_value(m_Columns.get_column("Genre")))
+	return true;
+    return false;
+}
+
+bool MainWindow::_rating_filter(const Gtk::TreeModel::const_iterator& iter){
+    return true;
+}
+
+
+int main(int argc, char *argv[]){
+    std::cout << "XML shoutcast tvlisting Parser" << std::endl;
+    
+    Gtk::Main kit(argc, argv);
+    
+    MainWindow mainWindow(std::string("tvlisting.xml"));
+    
+    Gtk::Main::run(mainWindow);
+    
+    return 0;
+}

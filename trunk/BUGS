@@ -1,0 +1,9 @@
+
+When adding/deleting columns all other columns are resized
+  * I think a fix would be not to clear/readd all columns on a change
+
+Preferences Dialog not implemented
+
+Bookmarks not implemented
+
+Need to implement Ratings filtering
