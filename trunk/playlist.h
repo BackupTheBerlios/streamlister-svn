@@ -89,9 +89,8 @@ class Playlist{
 	//~ bool saveto_file(const string_type & = string_type());
 	bool saveto_file(const string_type &);
 	
-	const std::vector<string_type>& get_genres() const{
-	    return m_genre_list;
-	}
+	const std::vector<string_type>& get_genres() const{return m_genre_list;}
+	const std::vector<string_type>& get_ratings() const{return m_ratings;}
 	
 	const std::vector<string_type>& get_properties() const {
 	    return m_properties;
