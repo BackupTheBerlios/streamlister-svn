@@ -15,7 +15,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <utility>
 #include <iostream>
+#include <functional>
 #include <string>
 #include <sstream>
 #include <cstring>
@@ -152,6 +154,39 @@ T string_subst(const T& str, const T& replace, const T& search=T(S)){
     return ret_str;
 }
 #undef S
+
+//~ template <typename T, typename S>
+//~ bool operator == (const std::pair<T, S>& p, const T& t){
+    //~ return p.first == t;
+//~ }
+//~ bool operator == (std::pair<Glib::ustring, bool>& p, const Glib::ustring& t){
+    //~ return p.first == t;
+//~ }
+
+/***** Functors *****/
+template <typename T, typename S>
+class _cmp_pair1st : public std::unary_function<std::pair<T, S>, bool> {
+    public:
+	typedef std::unary_function<std::pair<T, S>, bool> _Uf;
+	typedef typename _Uf::argument_type argument_type;
+	typedef typename _Uf::result_type result_type;
+    
+    public:
+	_cmp_pair1st(const typename argument_type::first_type &_t):t(_t){}
+	result_type operator () (const argument_type &p){
+	    return p.first == t;
+	}
+    
+    private:
+	typename argument_type::first_type t;
+};
+
+/***** Helper functions for Functors *****/
+//~ template <typename T, typename S>
+template <typename T>
+_cmp_pair1st<T, bool> cmp_pair1st(const T &_t){
+    return _cmp_pair1st<T, bool>(_t);
+}
 
 #if 1
 /*** curlpp trait derived classes  ***/
