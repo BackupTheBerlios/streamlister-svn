@@ -112,8 +112,8 @@ CheckboxListDialog::CheckboxListDialog(const CheckboxListDialog::string_type &ti
     show_all_children();
 }
 
-void CheckboxListDialog::run(){
-    Gtk::Dialog::run();
+int CheckboxListDialog::run(){
+    return Gtk::Dialog::run();
 }
 
 void CheckboxListDialog::add_items(const std::vector<std::pair<string_type, bool> > &items){
@@ -165,7 +165,7 @@ PreferencesDialog::PreferencesDialog(const Glib::ustring &filename)
     dout(1) << "PreferencesDialog::PreferencesDialog(" << filename << ")" << std::endl;
     dout(9) << "m_URLEntry.get_width_chars(): " << m_URLEntry.get_width_chars() << std::endl;
     
-    m_ColumnsButton.signal_clicked().connect(sigc::mem_fun(m_ColumnsDialog, &CheckboxListDialog::run));
+    m_ColumnsButton.signal_clicked().connect(sigc::hide_return(sigc::mem_fun(m_ColumnsDialog, &CheckboxListDialog::run)));
     //~ m_RatingsButton.signal_clicked().connect(sigc::mem_fun(m_ColumnsDialog, &CheckboxListDialog::run));
     
     /* make gui */
@@ -196,14 +196,14 @@ void PreferencesDialog::save() {
     m_config.save();
 }
 
-void PreferencesDialog::run(){
+int PreferencesDialog::run(){
     /* make sure the real entries are in there */
     m_numberEntry.set_text(m_config.get_num_entries());
     m_URLEntry.set_text(m_config.get_url());
     m_PlayerEntry.set_text(m_config.get_player_cmd());
     //~ m_columns;
     //~ m_ratings;
-    Gtk::Dialog::run();
+    return Gtk::Dialog::run();
 }
 
 void PreferencesDialog::on_response(int response_id){
@@ -248,8 +248,8 @@ AboutDialog::AboutDialog()
     show_all_children();
 }
 
-void AboutDialog::run(){
-    Gtk::Dialog::run();
+int AboutDialog::run(){
+    return Gtk::Dialog::run();
 }
 
 void AboutDialog::on_response(int response_id){

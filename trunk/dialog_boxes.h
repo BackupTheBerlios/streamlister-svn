@@ -75,7 +75,7 @@ class CheckboxListDialog : public Gtk::Dialog{
 	//~ CheckboxListDialog(const string_type&, const std::vector<std::pair<string_type, bool> > & = (std::vector<std::pair<string_type, bool> >()));
 	CheckboxListDialog(const string_type&, const Configuration::itemlist_type &);
 	
-	void run();
+	int run();
 	
 	//~ void set_items(const std::vector<string_type> &);
 	const Configuration::itemlist_type & get_items() const{return m_vectorItems;}
@@ -104,7 +104,7 @@ class PreferencesDialog : public Gtk::Dialog{
     public:
 	PreferencesDialog(const string_type &filename=string_type());
 	
-	void run();
+	int run();
 	
 	string_type get_url() const;
 	string_type get_player_cmd() const;
@@ -145,7 +145,7 @@ class PreferencesDialog : public Gtk::Dialog{
 class AboutDialog : public Gtk::Dialog {
     public:
 	AboutDialog();
-	void run();
+	int run();
     
     protected:
 	virtual void on_response(int);
