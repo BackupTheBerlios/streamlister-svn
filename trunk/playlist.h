@@ -22,6 +22,7 @@
 #define SHOUTCAST_URL "http://www.shoutcast.com/sbin/tvlister.phtml?limit=%s&service=winamp2&no_compress=1"
 #define PLAYER_CMD "mplayer -v -nocache '%s'"
 #define DEFAULT_NUMBER_ENTRIES "500"
+#define DEFAULT_CONFIG_PATH "~/.streamlisterrc"
 
 #include <cstdlib>
 #include <cassert>
