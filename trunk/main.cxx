@@ -17,7 +17,8 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
+#include <unistd.h>  // system
+#include <fcntl.h>   // open
 
 #include <cstdlib>
 #include <cassert>
@@ -36,6 +37,7 @@
 //~ #include <boost/filesystem/operations.hpp>
 
 #define _DEPRECIATED_FILESELECTION 0
+#define __C_VIDEO_HACK_
 
 #include "dialog_boxes.h"
 #include "playlist.h"
@@ -43,7 +45,7 @@
 
 class MainWindow : public Gtk::Window {
     public:
-	MainWindow(const Glib::ustring &filename=Glib::ustring());
+	MainWindow(int argc, char *argv[]);
 	virtual ~MainWindow();
 	
 	void load_data();
@@ -119,9 +121,8 @@ class MainWindow : public Gtk::Window {
 };
 
 
-MainWindow::MainWindow(const Glib::ustring &filename)
-     :playlist_data(filename),m_PlaylistView(),
-      m_NoStationsErrorDialog("This station has no channels, please choose another.")
+MainWindow::MainWindow(int argc, char *argv[])
+     :m_NoStationsErrorDialog("This station has no channels, please choose another.")
 {
     
     // Sets the border width of the window.
@@ -175,41 +176,55 @@ MainWindow::~MainWindow(){
 }
 
 void MainWindow::load_data(){
+    bool finvalid = false;
     Glib::ustring shoutcast_url = m_PreferencesDialog.get_url();
     // empty the old playlist
     playlist_data.clear();
     
+    /* make this configurable */
     std::cout << "### m_shoucast_url = " << shoutcast_url << std::endl;
-    try
-    {
-	// grab new playlist
-	std::ofstream file( m_tmp_filename.c_str() );
-	curlpp::ostream_trait body_trait( &file );
-	curlpp::output_null_trait header_trait; // don't care about the headers
-	
-	curlpp::http_easy h_httpeasy;
-	h_httpeasy.verbose(false);
-	h_httpeasy.follow_location(false);
-	h_httpeasy.no_body(false);
-	h_httpeasy.header(false);
-	h_httpeasy.user_agent("User-Agent:Winamp/5.0");
-	h_httpeasy.http_version(curlpp::http_version::v1_0);
-	h_httpeasy.url(shoutcast_url);
-	
-	h_httpeasy.m_body_storage.trait(&body_trait);
-	h_httpeasy.m_header_storage.trait(&header_trait);
-	
-	h_httpeasy.perform();
-    }
-    catch ( curlpp::exception & e )
-    {
-      std::cout << ("+++CURLPP::ERROR : "  __FILE__ ":") << __LINE__ << ": " << e.what() << std::endl;
-    }
-
-    // parse xml tv listing
-    if (!playlist_data.parse_file(m_tmp_filename)){
-	std::cout << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
-    }
+    //~ do{
+	try
+	{
+	    // grab new playlist
+	    std::ofstream file( m_tmp_filename.c_str() );
+	    curlpp::ostream_trait body_trait( &file );
+	    curlpp::output_null_trait header_trait; // don't care about the headers
+	    
+	    curlpp::http_easy h_httpeasy;
+	    h_httpeasy.verbose(false);
+	    h_httpeasy.follow_location(false);
+	    h_httpeasy.no_body(false);
+	    h_httpeasy.header(false);
+	    h_httpeasy.user_agent("User-Agent:Winamp/5.0");
+	    h_httpeasy.http_version(curlpp::http_version::v1_0);
+	    h_httpeasy.url(shoutcast_url);
+	    
+	    h_httpeasy.m_body_storage.trait(&body_trait);
+	    h_httpeasy.m_header_storage.trait(&header_trait);
+	    
+	    h_httpeasy.perform();
+	}
+	catch ( curlpp::exception & e )
+	{
+	    std::cout << ("+++CURLPP::ERROR : "  __FILE__ ":") << __LINE__ << ": " << e.what() << std::endl;
+	    //~ continue;
+	}
+    
+	// parse xml tv listing
+	try{
+	    playlist_data.parse_file(m_tmp_filename);
+	}catch(xmlpp::exception e){
+	    std::cout << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
+	    //~ continue;
+	}catch(std::runtime_error e){
+	    if(Glib::ustring(e.what()) == Glib::ustring("Incorrect Number of playlists")){
+		std::cout << "Incorrect Number of playlists" << std::endl;
+		//~ continue;
+	    }
+	    throw;
+	}
+    //~ }while(finvalid);
     
     // clear what ever was in the list store
     m_ListStoreRef->clear();
@@ -472,8 +487,8 @@ void MainWindow::_populate_liststore(){
 }
 
 void MainWindow::_populate_genrefilter(){
-    m_GenreCombo.append_text(std::string("ALL"));
-    for(std::vector<std::string>::const_iterator i = playlist_data.get_genres().begin();
+    m_GenreCombo.append_text(Glib::ustring("ALL"));
+    for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_genres().begin();
 	i != playlist_data.get_genres().end(); i++){
 	//~ std::cout << "Adding genre to genre filter: " << *i << std::endl;
 	m_GenreCombo.append_text(*i);
@@ -648,8 +663,25 @@ void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeVi
 	//~ if(streamurl != "" && system(player_cmd.c_str()) == -1)
 	    //~ std::cout << "system() errored" << std::endl;
 	if(streamurl != ""){
+#ifdef __C_VIDEO_HACK_
 	    //~ char *args[] = {};
-	    
+	    int stdout_fd = 1;
+	    pid_t pid = 0;
+	    pid = fork();
+	    if(pid == 0){
+		/* in child, do an exec */
+		close(stdout_fd);
+		/* make the outpupt descriptor point to null so it doesn't interfere with streamlister output */
+		if(open("/dev/null", O_WRONLY) != stdout_fd){
+		    std::cout << "Error: open(\"/dev/null\", O_WRONLY) failed to open as stdout [" << stdout_fd << "]" << std::endl;
+		    exit(0);
+		}
+		if(streamurl != "" && system(player_cmd.c_str()) == -1)
+		    std::cout << "system() errored" << std::endl;
+		//~ std::cout << "NEVER REACH HERE!!" << std::endl;
+		exit(0);
+	    }
+#endif
 	}
     }else
 	std::cout << "iterator not valid? hmm, something fishy" << std::endl;
@@ -695,7 +727,7 @@ int main(int argc, char *argv[]){
     
     Gtk::Main kit(argc, argv);
     
-    MainWindow mainWindow(std::string("tvlisting.xml"));
+    MainWindow mainWindow(argc, argv);
     
     Gtk::Main::run(mainWindow);
     
