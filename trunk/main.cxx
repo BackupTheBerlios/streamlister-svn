@@ -35,17 +35,15 @@
 
 //~ #include <boost/filesystem/operations.hpp>
 
+#define _DEPRECIATED_FILESELECTION 0
+
 #include "dialog_boxes.h"
 #include "playlist.h"
 #include "playlist_widgets.h"
 
-#define curl_system "curl -0 -A 'User-Agent:Winamp/5.0' 'http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2' -o nsv_tvlisting"
-//~ #define shoutcast_url "http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2"
-#define shoutcast_url "http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2&no_compress=1"
-
 class MainWindow : public Gtk::Window {
     public:
-	MainWindow(const Glib::ustring &filename);
+	MainWindow(const Glib::ustring &filename=Glib::ustring());
 	virtual ~MainWindow();
 	
 	void load_data();
@@ -63,7 +61,11 @@ class MainWindow : public Gtk::Window {
 	void _populate_genrefilter();
 	void _reset_columns();
 	void _create_columns();
+	void _run_preferences();
+	void _save_as();
 	void _do_nothing();
+    
+	void _get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn* column);
     
 	void _make_tmp_filename();
     
@@ -97,29 +99,39 @@ class MainWindow : public Gtk::Window {
 	Glib::RefPtr<Gtk::ListStore> m_ListStoreRef;
 	//~ Gtk::TreeView m_PlaylistView;
 	PlaylistView m_PlaylistView;
+	//~ PlaylistView<MainWindow> m_PlaylistView;
 	
 	// Dialog boxes
-	AboutDialog m_AboutDialog;
+	PreferencesDialog  m_PreferencesDialog;
+	AboutDialog        m_AboutDialog;
+	//~ Gtk::FileSelection m_FileSelection;
+	//~ Gtk::FileChooserDialog m_FileChooserDialog;
+	ErrorDialog            m_NoStationsErrorDialog;
+	StationSelectionDialog m_SelectStationSSDialog;
 	
 	Playlist playlist_data;
 	Glib::ustring m_current_genre_filter;
 	Glib::ustring m_current_search_filter;
 	Glib::ustring m_tmp_filename;
-	Glib::ustring m_shoucast_url;
+	//~ Glib::ustring m_shoucast_url;
+	Glib::ustring m_player_cmd;
 
 };
 
 
-MainWindow::MainWindow(const Glib::ustring &filename):playlist_data(filename) {
+MainWindow::MainWindow(const Glib::ustring &filename)
+     :playlist_data(filename),m_PlaylistView(),
+      m_NoStationsErrorDialog("This station has no channels, please choose another.")
+{
     
     // Sets the border width of the window.
-    set_title("tvlistings");
+    set_title("streamlistings");
     set_border_width(5);
     set_default_size(700, 700); // asking
     set_size_request(300, 100); // commanding
     
     _make_tmp_filename();
-    m_shoucast_url = Glib::ustring(shoutcast_url);
+    //~ m_shoucast_url = Glib::ustring(SHOUTCAST_URL);
     
     // make columns
     for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
@@ -163,10 +175,11 @@ MainWindow::~MainWindow(){
 }
 
 void MainWindow::load_data(){
+    Glib::ustring shoutcast_url = m_PreferencesDialog.get_url();
     // empty the old playlist
     playlist_data.clear();
     
-    std::cout << "### m_shoucast_url = " << m_shoucast_url << std::endl;
+    std::cout << "### m_shoucast_url = " << shoutcast_url << std::endl;
     try
     {
 	// grab new playlist
@@ -181,7 +194,7 @@ void MainWindow::load_data(){
 	h_httpeasy.header(false);
 	h_httpeasy.user_agent("User-Agent:Winamp/5.0");
 	h_httpeasy.http_version(curlpp::http_version::v1_0);
-	h_httpeasy.url(m_shoucast_url);
+	h_httpeasy.url(shoutcast_url);
 	
 	h_httpeasy.m_body_storage.trait(&body_trait);
 	h_httpeasy.m_header_storage.trait(&header_trait);
@@ -195,7 +208,7 @@ void MainWindow::load_data(){
 
     // parse xml tv listing
     if (!playlist_data.parse_file(m_tmp_filename)){
-	std::cout << "ERROR parsing tvlisting: " << m_tmp_filename << std::endl;
+	std::cout << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
     }
     
     // clear what ever was in the list store
@@ -240,6 +253,9 @@ void MainWindow::genre_filter(){
     }
 }
 
+/****                                                                                    ****/
+/**** START PRIVATE MEMBER FUNCTIONS  ****/
+/****                                                                                    ****/
 Gtk::Widget* MainWindow::_create_menu(){
     std::cout << "MainWindow::_create_menu()" << std::endl;
     //Create actions for menus and toolbars:
@@ -260,7 +276,7 @@ Gtk::Widget* MainWindow::_create_menu(){
     m_refActionGroup->add( Gtk::Action::create("FileNew", Gtk::Stock::NEW) ); //Sub-menu.
     m_refActionGroup->add( Gtk::Action::create("FileSaveAs", Gtk::Stock::SAVE_AS),
 	Gtk::AccelKey::AccelKey('s', Gdk::CONTROL_MASK),
-	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+	sigc::mem_fun(*this, &MainWindow::_save_as) );
     m_refActionGroup->add( Gtk::Action::create("FileQuit", Gtk::Stock::QUIT),
 	sigc::mem_fun(*this, &MainWindow::hide) );
 	//~ Gtk::Main::quit );
@@ -268,7 +284,7 @@ Gtk::Widget* MainWindow::_create_menu(){
     //Edit menu:
     m_refActionGroup->add( Gtk::Action::create("EditMenu", "Edit") );
     m_refActionGroup->add( Gtk::Action::create("EditPreferences", "_Preferences"),
-	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+	sigc::mem_fun(*this, &MainWindow::_run_preferences) );
     
     //Columns menu:
     m_refActionGroup->add( Gtk::Action::create("ColumnsMenu", "Columns") );
@@ -419,6 +435,9 @@ Gtk::Widget* MainWindow::_create_liststore(){
     
     _create_columns();
     
+    // connect signal for when the row is activated
+    m_PlaylistView.signal_row_activated().connect(sigc::mem_fun(*this, &MainWindow::_get_playlistfile));
+    
     //Only show the scrollbars when they are necessary:
     m_ScrolledWindow.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
     m_ScrolledWindow.add(m_PlaylistView);
@@ -493,7 +512,7 @@ void MainWindow::_create_columns(){
 	Glib::RefPtr<Gtk::Action> refAction = m_refActionGroup->get_action(Glib::ustring("Columns") + (*i));
 	if(refAction && (Glib::RefPtr<Gtk::ToggleAction>::cast_static(refAction))->get_active()){
 	    //~ Glib::ustring columnName = (*i)->get_name().substr(7);
-	    std::cout << "appending column: " << (*i) << "(" << (&m_Columns.get_column(*i)) << ")" << std::endl;
+	    //~ std::cout << "appending column: " << (*i) << "(" << (&m_Columns.get_column(*i)) << ")" << std::endl;
 	    m_PlaylistView.append_column(*i, m_Columns.get_column(*i));
 	}
     }
@@ -505,13 +524,142 @@ void MainWindow::_create_columns(){
     }
 }
 
+void MainWindow::_run_preferences(){
+    m_PreferencesDialog.run();
+    
+    /* do changes made from preferences */
+    //~ m_shoucast_url = m_PreferencesDialog.get_url();
+}
+    
+void MainWindow::_save_as(){
+    // setup save as file chooser dialog
+#ifdef _DEPRECIATED_FILESELECTION
+    Gtk::FileSelection fcd("Save XML Listing As");
+#else
+    Gtk::FileChooserDialog fcd("Save XML Listing As", Gtk::FILE_CHOOSER_ACTION_SAVE);
+    fcd.add_button("_Cancel", 0);
+    fcd.add_button("_Ok", 1);
+#endif
+    
+    if(fcd.run()){
+	std::cout << "Chosen Filename" << fcd.get_filename() << std::endl;
+	playlist_data.saveto_file(fcd.get_filename());
+    }
+}
+
 void MainWindow::_do_nothing(){}
+
+void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn* column){
+    std::cout << "MainWindow::_get_playlistfile()" << std::endl;
+    std::cout << "  " << column->get_title() << ": " << path.to_string() << std::endl;
+    std::cout << "  Playing MPlayer ..." << std::endl;
+    
+    // get the playstring
+    Gtk::TreeModel::iterator iter = m_PlaylistView.get_model()->get_iter(path);
+    std::cout << "  activated row: " << path.to_string() << std::endl;
+    if(iter){
+	Glib::ustring playstring;
+	int id = -1;
+	// FIXME: this should be dynamic
+	
+	//~ for(int i=0; i < get_model()->get_n_columns(); i++){
+	    //~ iter->get_value(i, playstring);
+	    //~ std::cout << "  +name = " << playstring << std::endl;
+	//~ }
+	
+	// get this id, so I can get which PlaylistEntry this is, so I can caache the results
+	iter->get_value(0, id);
+	std::cout << "  _id = " << id << " (" << 0 << ")" << std::endl;
+	
+	iter->get_value(m_PlaylistView.get_model()->get_n_columns()-1, playstring);
+	std::cout << "  playstring = " << playstring << " (" << m_PlaylistView.get_model()->get_n_columns()-1 << ")" << std::endl;
+	
+	Glib::ustring body;
+	try
+	{
+	    // get the real url
+	    //~ curlpp::cleanup cleanup;
+	    //~ curlpp::output_ustring_trait o_us_trait;
+	    curlpp::memory_trait header_memory_trait;
+	    curlpp::memory_trait body_memory_trait;
+	    //~ std::ofstream file( "body.output" );
+	    //~ curlpp::ostream_trait body_trait( &file );
+	    
+	    curlpp::http_easy h_httpeasy;
+	    h_httpeasy.verbose(false);
+	    h_httpeasy.follow_location(false);
+	    h_httpeasy.no_body(false);
+	    h_httpeasy.header(false);
+	    h_httpeasy.user_agent("User-Agent:Winamp/5.0");
+	    h_httpeasy.http_version(curlpp::http_version::v1_0);
+	    h_httpeasy.url(playstring);
+	    
+	    //~ h_httpeasy.m_body_storage.trait(&o_us_trait);
+	    //~ h_httpeasy.m_body_storage.trait(&body_trait);
+	    h_httpeasy.m_body_storage.trait(&body_memory_trait);
+	    h_httpeasy.m_header_storage.trait(&header_memory_trait);
+	    
+	    h_httpeasy.perform();
+	    
+	    body = body_memory_trait.string();
+	    Glib::ustring header(header_memory_trait.string());
+	    //~ cout << body_memory_trait.length() << ":||" << body << "||" << std::endl;
+	    //~ cout << header_memory_trait.length() << ":||" << header << "||" << std::endl;
+	}
+	catch ( curlpp::exception & e )
+	{
+	  std::cout << "+++CURLPP::ERROR : " << e.what() << std::endl;
+	}
+	
+	PlaylistFile plsfile(body);
+	
+	for(std::vector<PlaylistFile::PlaylistFileDesc>::const_iterator i = plsfile.get_files().begin(); i != plsfile.get_files().end(); i++){
+	    std::cout << "=== Title: " << i->title << std::endl;
+	    std::cout << "=== File: " << i->filename << std::endl;
+	}
+	
+	Glib::ustring streamurl;
+	if(plsfile.size() <= 0){
+	    // not stations to choose from
+	    int ret = m_NoStationsErrorDialog.run();
+	    std::cout << ">>> Responseid = " << ret << std::endl;
+	}else if(plsfile.size() == 1){
+	    // just play the station
+	    streamurl = plsfile.get_files()[0].filename;
+	}else{
+	    // popup dialogbox so user can chose a station
+	    std::cout << "<<<Choose Station>>>" << std::endl;
+	    //~ Gtk::Dialog station_selection_Dialog("Choose Station", true, true);
+	    
+	    int which = m_SelectStationSSDialog.run(plsfile.get_titles());
+	    std::cout << ">>> Responseid = " << which << std::endl;
+	    
+	    assert(which > -1 && which < (int)plsfile.get_files().size());
+	    std::cout << "---| Title: " << plsfile.get_files()[which].title << std::endl;
+	    std::cout << "---| File: " << plsfile.get_files()[which].filename << std::endl;
+	    
+	    streamurl = plsfile.get_files()[which].filename;
+	}
+	
+	// send to mplayer
+	//~ std::cout << "mplayer -v -nocache '" << streamurl << "'" << std::endl;
+	Glib::ustring player_cmd = string_subst(m_PreferencesDialog.get_player_cmd(), streamurl);
+	std::cout << player_cmd << std::endl;
+	//~ if(streamurl != "" && system(player_cmd.c_str()) == -1)
+	    //~ std::cout << "system() errored" << std::endl;
+	if(streamurl != ""){
+	    //~ char *args[] = {};
+	    
+	}
+    }else
+	std::cout << "iterator not valid? hmm, something fishy" << std::endl;
+}
 
 void MainWindow::_make_tmp_filename(){
     pid_t mypid = getpid();
     // FIXME: get progname dynamically
     std::ostringstream oss;
-    oss << Glib::ustring("/tmp/tvlister.") << mypid;
+    oss << Glib::ustring("/tmp/streamlister.") << mypid;
     m_tmp_filename = oss.str();
     std::cout << "  m_tmp_filename = " << m_tmp_filename << std::endl;
 }
