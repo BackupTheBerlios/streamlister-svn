@@ -15,7 +15,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <cstdlib>
+#include <cassert>
+
+#include <iostream>
+
+#include <vector>
+
 #include "dialog_boxes.h"
+#include "playlist.h"
 
 /*** class ErrorDialog ***/
 ErrorDialog::ErrorDialog(const Glib::ustring &errstr)
@@ -97,7 +105,7 @@ PreferencesDialog::PreferencesDialog(const Glib::ustring &filename)
 	 m_PlayerLabel("player command: "),
 	 m_Columns("_Columns", true),m_Ratings("_Ratings", true)
 {
-    std::cout << "m_URLEntry.get_width_chars(): " << m_URLEntry.get_width_chars() << std::endl;
+    dout(9) << "m_URLEntry.get_width_chars(): " << m_URLEntry.get_width_chars() << std::endl;
     
     /* read preferences from file */
     

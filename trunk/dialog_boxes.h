@@ -18,14 +18,9 @@
 #ifndef __DIALOG_BOXES_H__
 #define __DIALOG_BOXES_H__
 
-#include <cstdlib>
-#include <cassert>
-
-#include <iostream>
+#include <vector>
 
 #include <gtkmm.h>
-
-#include "playlist.h"
 
 class ErrorDialog : public Gtk::Dialog {
     public:
