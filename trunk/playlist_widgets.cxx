@@ -55,10 +55,10 @@ PlaylistColumns<T>::get_column(const PlaylistColumns<T>::key_type& name){
 */
 
 /*** class PlaylistView ***/
-
 PlaylistView::PlaylistView()
 	:Gtk::TreeView(),
-	 m_NoStationsErrorDialog("This station has no channels, please choose another."){
+	 m_NoStationsErrorDialog("This station has no channels, please choose another.")
+{
     //~ set_column_types(m_Columns);
     
     // set the signal handler for activating a tree row
@@ -84,6 +84,7 @@ void PlaylistView::set_model(const Glib::RefPtr<Gtk::TreeModel>& model){
 
 //~ void PlaylistView::reset_columns(){}
 
+#if 0
 void PlaylistView::on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn* column){
     std::cout << "PlaylistView::on_row_activated()" << std::endl;
     std::cout << "  " << column->get_title() << ": " << path.to_string() << std::endl;
@@ -177,12 +178,14 @@ void PlaylistView::on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeV
 	}
 	
 	// send to mplayer
-	std::cout << "mplayer -v -nocache '" << streamurl << "'" << std::endl;
+	//~ std::cout << "mplayer -v -nocache '" << streamurl << "'" << std::endl;
+	std::cout << string_subst(m_parent->get_prefs().get_player_cmd(), streamurl) << std::endl;
     }else
 	std::cout << "iterator not valid? hmm, something fishy" << std::endl;
     
     return Gtk::TreeView::on_row_activated(path, column);
 }
+#endif
 
 bool PlaylistView::on_button_press_event(GdkEventButton *evbutton){
     std::cout << "PlaylistView::on_button_press_event()" << std::endl;

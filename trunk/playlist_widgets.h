@@ -107,7 +107,7 @@ template <class T>
 void
 PlaylistColumns<T>::add(const PlaylistColumns<T>::key_type& name){
     typename PlaylistColumns<T>::column_type& column = *(new PlaylistColumns<T>::column_type);
-    std::cout << "PlaylistColumns::add() : " << name << "(" << (&column) << ")" << std::endl;
+    //~ std::cout << "PlaylistColumns::add() : " << name << "(" << (&column) << ")" << std::endl;
     column_ordering.push_back(name);
     column_mapping[name] = &column;
     this->Gtk::TreeModel::ColumnRecord::add(column);
@@ -174,7 +174,7 @@ class PlaylistView : public Gtk::TreeView {
 	void reset_columns(){}
 	
     protected:
-	void on_row_activated(const Gtk::TreeModel::Path&, Gtk::TreeViewColumn*);
+	//~ void on_row_activated(const Gtk::TreeModel::Path&, Gtk::TreeViewColumn*);
 	bool on_button_press_event(GdkEventButton *);
 	bool on_button_release_event(GdkEventButton *);
 	
