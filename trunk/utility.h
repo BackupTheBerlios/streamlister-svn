@@ -1,4 +1,5 @@
 
+#include <iostream>
 #include <string>
 #include <sstream>
 #include <cstring>
@@ -49,16 +50,16 @@ class dstream : public std::ostream {
 	template <typename T>
 	dstream& operator << (const T& arg){
 	    if(cur_level <= debug_level && debug_level && cur_level){
-		if(prefix)
-		    static_cast<dstream&>((*static_cast<std::ostream*>(this) <<("<")) << cur_level << ">");
+		//~ if(prefix)
+		    //~ static_cast<dstream&>((*static_cast<std::ostream*>(this) <<("<")) << cur_level << ">");
 		return static_cast<dstream&>(*static_cast<std::ostream*>(this) <<(arg));
 	    }else
 		return *this;
 	}
 	dstream& operator << (std::ostream& (*f)(std::ostream&)){
 	    if(cur_level <= debug_level && debug_level && cur_level){
-		if(prefix)
-		    static_cast<dstream&>((*static_cast<std::ostream*>(this) <<("<")) << cur_level << ">");
+		//~ if(prefix)
+		    //~ static_cast<dstream&>((*static_cast<std::ostream*>(this) <<("<")) << cur_level << ">");
 		return static_cast<dstream&>((f(*this)));
 	    }else
 		return *this;
@@ -66,11 +67,13 @@ class dstream : public std::ostream {
 	/* debug_lvl should be on scale 0-9, 9 meaning most verbose, 0 is no output */
 	dstream& operator () (int dl = default_level){
 	    cur_level = dl;
+	    if(prefix)
+		static_cast<dstream&>((*static_cast<std::ostream*>(this) <<("<")) << cur_level << ">");
 	    return *this;
 	}
 	
 	int get_debug_level() const {return debug_level;}
-	int set_debug_level(int l=default_level) {return (debug_level=l,debug_level);}
+	int set_debug_level(int l=default_level) {int pdl=debug_level;debug_level=l;return pdl;}
 	
 	bool get_prefix() {return prefix;}
 	bool set_prefix(bool s) {bool t=prefix;prefix=s; return t;}
