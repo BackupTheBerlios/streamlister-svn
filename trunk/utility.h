@@ -1,3 +1,19 @@
+/* Copyright (C) 2004  crass <crass@users.berlios.de>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include <iostream>
 #include <string>
@@ -9,6 +25,9 @@
 #else
 #  include <ext/hash_fun.h>
 #endif
+
+#include <curlpp/curlpp.hpp>
+#include <curlpp/http_easy.hpp>
 
 #include <glibmm.h>
 
@@ -133,5 +152,37 @@ T string_subst(const T& str, const T& replace, const T& search=T(S)){
     return ret_str;
 }
 #undef S
+
+#if 1
+/*** curlpp trait derived classes  ***/
+namespace curlpp
+{
+    class output_ustring_trait : public curlpp::output_trait {
+	public:
+	    output_ustring_trait( ) {}
+	    virtual ~output_ustring_trait() {}
+	    
+	    virtual size_t write( void *buffer, size_t length ){
+		std::cout << "--- output_ustring_trait::write()" << std::endl;
+		m_data.append(static_cast<const char*>(buffer), length);
+		return length;
+	    }
+	    
+	private:
+	    Glib::ustring m_data;
+    };
+    
+    class output_null_trait : public curlpp::output_trait {
+	public:
+	    output_null_trait( ) {}
+	    virtual ~output_null_trait() {}
+	    
+	    virtual size_t write( void *buffer, size_t length ){
+		//~ std::cout << "--- output_null_trait::write()" << std::endl;
+		return length;
+	    }
+    };
+} /*** END CURLPP TRAITS ***/
+#endif
 
 #endif /* __UTILITY_H__ */
