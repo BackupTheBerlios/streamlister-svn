@@ -293,6 +293,9 @@ void PlaylistFile::parse_file(const PlaylistFile::string_type &plsfile){
 	// throw exception
 	
 	std::cerr << "+++ERROR: could not find playlist header" << std::endl;
+	std::cerr << "########################################" << std::endl;
+	std::cerr << body << std::endl;
+	std::cerr << "########################################" << std::endl;
     }
     
 }
