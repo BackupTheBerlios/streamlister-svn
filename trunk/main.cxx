@@ -24,11 +24,9 @@
 #include <cassert>
 
 #include <iostream>
-#include <fstream>
+//~ #include <fstream>
 
 #include <string>
-#include <ext/hash_set>
-#include <ext/hash_map>
 
 #include <gtkmm.h>
 #include <curlpp/curlpp.hpp>
@@ -195,18 +193,17 @@ MainWindow::~MainWindow(){
 void MainWindow::load_data(){
     bool finvalid = false;
     Glib::ustring shoutcast_url = m_PreferencesDialog.get_url();
-    // empty the old playlist
-    playlist_data.clear();
     
     /* make this configurable */
     dout(6) << "### m_shoucast_url = " << shoutcast_url << std::endl;
+    curlpp::memory_trait body_memory_trait;
     //~ do{
 	try
 	{
 	    // grab new playlist
-	    std::ofstream file( m_tmp_filename.c_str() );
-	    curlpp::ostream_trait body_trait( &file );
-	    curlpp::output_null_trait header_trait; // don't care about the headers
+	    //~ std::ofstream file( m_tmp_filename.c_str() );
+	    //~ curlpp::ostream_trait body_trait( &file );
+	    curlpp::output_null_trait header_null_trait; // don't care about the headers
 	    
 	    curlpp::http_easy h_httpeasy;
 	    h_httpeasy.verbose(false);
@@ -217,8 +214,8 @@ void MainWindow::load_data(){
 	    h_httpeasy.http_version(curlpp::http_version::v1_0);
 	    h_httpeasy.url(shoutcast_url);
 	    
-	    h_httpeasy.m_body_storage.trait(&body_trait);
-	    h_httpeasy.m_header_storage.trait(&header_trait);
+	    h_httpeasy.m_body_storage.trait(&body_memory_trait);
+	    h_httpeasy.m_header_storage.trait(&header_null_trait);
 	    
 	    h_httpeasy.perform();
 	}
@@ -230,9 +227,12 @@ void MainWindow::load_data(){
     
 	// parse xml tv listing
 	try{
-	    playlist_data.parse_file(m_tmp_filename);
+	    //~ playlist_data.parse_file(m_tmp_filename);
+	    playlist_data.parse_memory(body_memory_trait.string());
 	}catch(xmlpp::exception e){
-	    dout(3) << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
+	    //~ dout(3) << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
+	    dout(3) << "ERROR parsing streamlisting" << std::endl;
+	    dout(9) << body_memory_trait.string() << std::endl;
 	    //~ continue;
 	}catch(std::runtime_error e){
 	    if(Glib::ustring(e.what()) == Glib::ustring("Incorrect Number of playlists")){
