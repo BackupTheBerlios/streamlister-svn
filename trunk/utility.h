@@ -31,8 +31,14 @@
 #  include <ext/hash_fun.h>
 #endif
 
-#include <curlpp/curlpp.hpp>
-#include <curlpp/http_easy.hpp>
+#ifdef HAVE_LIBCURLPP_DEV
+# include <curlpp/cURLpp.hpp>
+# include <curlpp/Options.hpp>
+# include <curlpp/Exception.hpp>
+#else
+# include <curlpp/curlpp.hpp>
+# include <curlpp/http_easy.hpp>
+#endif /* HAVE_LIBCURLPP_DEV */
 
 #include <glibmm.h>
 
@@ -46,6 +52,8 @@
 
 #ifndef __UTILITY_H__
 #define __UTILITY_H__
+
+size_t write_data(char *buffer, size_t size, size_t nitems, void *instream);
 
 /*** Make hash functor for hashing std::strings  ***/
 namespace __gnu_cxx
@@ -193,7 +201,8 @@ _cmp_pair1st<T, bool> cmp_pair1st(const T &_t){
     return _cmp_pair1st<T, bool>(_t);
 }
 
-#if 1
+//~ #if 1
+#ifndef HAVE_LIBCURLPP_DEV
 /*** curlpp trait derived classes  ***/
 namespace curlpp
 {
@@ -203,7 +212,7 @@ namespace curlpp
 	    virtual ~output_ustring_trait() {}
 	    
 	    virtual size_t write( void *buffer, size_t length ){
-		std::cout << "--- output_ustring_trait::write()" << std::endl;
+		std::dout(9) << "--- output_ustring_trait::write()" << std::endl;
 		m_data.append(static_cast<const char*>(buffer), length);
 		return length;
 	    }
@@ -218,7 +227,7 @@ namespace curlpp
 	    virtual ~output_null_trait() {}
 	    
 	    virtual size_t write( void *buffer, size_t length ){
-		//~ std::cout << "--- output_null_trait::write()" << std::endl;
+		//~ std::dout(9) << "--- output_null_trait::write()" << std::endl;
 		return length;
 	    }
     };
