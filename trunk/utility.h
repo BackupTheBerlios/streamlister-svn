@@ -1,6 +1,12 @@
 
 #include <string>
-#include <ext/stl_hash_fun.h>
+
+#if __GNUC__ == 3 && __GNUC_MINOR__ < 4
+#  include <ext/stl_hash_fun.h>
+#else
+#  include <ext/hash_fun.h>
+#endif
+
 #include <glibmm.h>
 
 #ifndef __UTILITY_H__
