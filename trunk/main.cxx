@@ -212,6 +212,8 @@ void MainWindow::load_data(){
 
 void MainWindow::reload(){
     dout(7) << "MainWindow::reload()" << std::endl;
+    // get the stream listings
+    _get_playlist();
     load_data();
 }
 
@@ -272,12 +274,12 @@ Gtk::Widget* MainWindow::_create_menu(){
 	sigc::mem_fun(*this, &MainWindow::_run_preferences) );
     
     //Columns menu:
-    m_refActionGroup->add( Gtk::Action::create("ColumnsMenu", "Columns") );
-    for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
-	dout(9) << "adding action to actiongroup: " << *i << std::endl;
-	m_refActionGroup->add( Gtk::ToggleAction::create("Columns" + (*i), *i, Glib::ustring(), true),
-	    sigc::mem_fun(*this, &MainWindow::_reset_columns) );
-    }
+    //~ m_refActionGroup->add( Gtk::Action::create("ColumnsMenu", "Columns") );
+    //~ for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
+	//~ dout(9) << "adding action to actiongroup: " << *i << std::endl;
+	//~ m_refActionGroup->add( Gtk::ToggleAction::create("Columns" + (*i), *i, Glib::ustring(), true),
+	    //~ sigc::mem_fun(*this, &MainWindow::_reset_columns) );
+    //~ }
     
     //Ratings menu:
     m_refActionGroup->add( Gtk::Action::create("RatingsMenu", "Ratings") );
@@ -292,7 +294,7 @@ Gtk::Widget* MainWindow::_create_menu(){
     //~ m_refActionGroup->add( Gtk::Action::create("HelpAbout", Gtk::Stock::HELP),
 	//~ sigc::mem_fun(*this, &MainWindow::_do_nothing) );
     m_refActionGroup->add( Gtk::Action::create("HelpAbout", "About"),
-	sigc::mem_fun(m_AboutDialog, &AboutDialog::run) );
+	sigc::hide_return(sigc::mem_fun(m_AboutDialog, &AboutDialog::run)) );
     
     m_refUIManager = Gtk::UIManager::create();
     m_refUIManager->insert_action_group(m_refActionGroup);
@@ -317,15 +319,15 @@ Gtk::Widget* MainWindow::_create_menu(){
 	    "      <menuitem action='FileQuit'/>"
 	    "    </menu>"
 	    "    <menu action='EditMenu'>"
-	    "      <menuitem action='EditPreferences'/>"
-	    "    </menu>"
-	    "    <menu action='ColumnsMenu'>";
+	    "      <menuitem action='EditPreferences'/>";
+	    //~ "    </menu>"
+	    //~ "    <menu action='ColumnsMenu'>";
 	
-	Glib::ustring ui_info_columns; 
-	for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
-	    dout(9) << "adding action to ui: " << *i << std::endl;
-	    ui_info_columns += ("      <menuitem action='Columns" + (*i) + "'/>");
-	}
+	Glib::ustring ui_info_columns = ""; 
+	//~ for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
+	    //~ dout(9) << "adding action to ui: " << *i << std::endl;
+	    //~ ui_info_columns += ("      <menuitem action='Columns" + (*i) + "'/>");
+	//~ }
 	
 	Glib::ustring ui_info_end = 
 	    "    </menu>"
@@ -495,8 +497,10 @@ void MainWindow::_create_columns(){
     
     for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
     //~ for(Glib::ListHandle<Glib::RefPtr<Gtk::Action> >::iterator i = m_ColumnsActions.begin(); i != m_ColumnsActions.end(); i++){
-	Glib::RefPtr<Gtk::Action> refAction = m_refActionGroup->get_action(Glib::ustring("Columns") + (*i));
-	if(refAction && (Glib::RefPtr<Gtk::ToggleAction>::cast_static(refAction))->get_active()){
+	//~ Glib::RefPtr<Gtk::Action> refAction = m_refActionGroup->get_action(Glib::ustring("Columns") + (*i));
+	//~ if(refAction && (Glib::RefPtr<Gtk::ToggleAction>::cast_static(refAction))->get_active()){
+	Configuration::itemlist_type::const_iterator j = m_PreferencesDialog.get_columns().end();
+	if((j = std::find(m_PreferencesDialog.get_columns().begin(), m_PreferencesDialog.get_columns().end(), std::make_pair(*i, true))) != m_PreferencesDialog.get_columns().end() && j->second){
 	    //~ Glib::ustring columnName = (*i)->get_name().substr(7);
 	    dout(9) << "appending column: " << (*i) << "(" << (&m_Columns.get_column(*i)) << ")" << std::endl;
 	    m_PlaylistView.append_column(*i, m_Columns.get_column(*i));
@@ -511,7 +515,9 @@ void MainWindow::_create_columns(){
 }
 
 void MainWindow::_run_preferences(){
-    m_PreferencesDialog.run();
+    if(m_PreferencesDialog.run()){
+	_reset_columns();
+    }
     
     /* do changes made from preferences */
     //~ m_shoucast_url = m_PreferencesDialog.get_url();
