@@ -1,5 +1,5 @@
 bin_PROGRAMS = streamlister
-streamlister_SOURCES = main.cxx dialog_boxes.cxx playlist_widgets.cxx playlist.cxx configuration.cxx \
+streamlister_SOURCES = main.cxx dialog_boxes.cxx playlist_widgets.cxx playlist.cxx utility.cxx configuration.cxx \
 		 dialog_boxes.h playlist_widgets.h playlist.h utility.h configuration.h
 streamlister_CXXFLAGS = $(GTKMM_CFLAGS) $(LIBXMLPP_CFLAGS) $(CURLPP_CFLAGS) $(CFLAGS)
 streamlister_LDFLAGS = $(GTKMM_LIBS) $(LIBXMLPP_LIBS) $(CURLPP_LIBS) $(LDFLAGS)
@@ -14,7 +14,7 @@ download_streamlisting:
 	curl -0 -A 'User-Agent:Winamp/5.0' 'http://www.shoutcast.com/sbin/tvlister.phtml?limit=500&service=winamp2&no_compress=1' -o tvlisting.xml
 
 changelog: svn2cl.xsl
-	svn log --xml -v > .cl.xml
+	svn log -r 0:HEAD --xml -v > .cl.xml
 	xsltproc -o ChangeLog svn2cl.xsl .cl.xml
 	rm .cl.xml
 
