@@ -24,19 +24,11 @@
 #define DEFAULT_NUMBER_ENTRIES "500"
 #define DEFAULT_CONFIG_PATH "~/.streamlisterrc"
 
-#include <cstdlib>
-#include <cassert>
-#include <stdexcept>
-
 #include <iostream>
 
-#include <string>
-#include <ext/hash_set>
 #include <ext/hash_map>
 
 #include <libxml++/libxml++.h>
-
-#include "utility.h"
 
 //~ using namespace std;
 //~ using namespace xmlpp;
@@ -46,32 +38,35 @@
 */
 class PlaylistEntry{
     public:
+	typedef Glib::ustring string_type;
+    
+    public:
 	PlaylistEntry(const xmlpp::Element *);
     
 	std::ostream& print(std::ostream&) const;
     
 	// accessor functions
-	std::string get_data(const std::string&) const;
+	string_type get_data(const string_type&) const;
 	
-	std::string get_name() const { return name; }
-	std::string get_stationid() const { return stationid; }
-	std::string get_genre() const { return genre; }
-	std::string get_nowplaying() const { return nowplaying; }
-	std::string get_listeners() const { return listeners; }
-	std::string get_bitrate() const { return bitrate; }
-	std::string get_rating() const { return rating; }
-	std::string get_playstring() const { return playstring; }
+	string_type get_name() const { return name; }
+	string_type get_stationid() const { return stationid; }
+	string_type get_genre() const { return genre; }
+	string_type get_nowplaying() const { return nowplaying; }
+	string_type get_listeners() const { return listeners; }
+	string_type get_bitrate() const { return bitrate; }
+	string_type get_rating() const { return rating; }
+	string_type get_playstring() const { return playstring; }
     
     private:
-	__gnu_cxx::hash_map<Glib::ustring, Glib::ustring> data_map;
-	std::string name;
-	std::string stationid;
-	std::string genre;
-	std::string nowplaying;
-	std::string listeners;
-	std::string bitrate;
-	std::string rating;
-	std::string playstring;
+	__gnu_cxx::hash_map<string_type, string_type> data_map;
+	string_type name;
+	string_type stationid;
+	string_type genre;
+	string_type nowplaying;
+	string_type listeners;
+	string_type bitrate;
+	string_type rating;
+	string_type playstring;
     
 };
 
@@ -79,34 +74,41 @@ std::ostream& operator << (std::ostream &, const PlaylistEntry& );
 
 class Playlist{
     public:
-	Playlist(const std::string & = std::string());
+	typedef Glib::ustring string_type;
+    
+    public:
+	Playlist(const string_type & = string_type());
 	
 	std::vector<PlaylistEntry>& get_entries() { return m_entries; }
 	const std::vector<PlaylistEntry>& get_entries() const { return m_entries; }
 	
 	void clear();
 	
-	void parse_file(const std::string & = std::string());
-	//~ bool saveto_file(const std::string & = std::string());
-	bool saveto_file(const std::string &);
+	void parse_memory(const string_type & = string_type());
+	void parse_file(const string_type & = string_type());
+	//~ bool saveto_file(const string_type & = string_type());
+	bool saveto_file(const string_type &);
 	
-	const std::vector<Glib::ustring>& get_genres() const{
+	const std::vector<string_type>& get_genres() const{
 	    return m_genre_list;
 	}
 	
-	const std::vector<Glib::ustring>& get_properties() const {
+	const std::vector<string_type>& get_properties() const {
 	    return m_properties;
 	}
     
     private:
-	std::vector<Glib::ustring>   m_properties; // FIXME: hack!!!
+	void _parse_document();
+    
+    private:
+	std::vector<string_type>   m_properties; // FIXME: hack!!!
 	
 	int                          m_numEntries;
-	std::string                  m_label;
-	std::string                  m_filename;
+	string_type                  m_label;
+	string_type                  m_filename;
 	std::vector<PlaylistEntry>   m_entries;
-	std::vector<Glib::ustring>   m_genre_list;
-	std::vector<Glib::ustring>   m_ratings;
+	std::vector<string_type>     m_genre_list;
+	std::vector<string_type>     m_ratings;
 	
 	//~ xmlpp::Document              m_xmldocument;
 	xmlpp::DomParser             m_xmldocument;
@@ -123,23 +125,24 @@ class PlaylistFile {
     
     public:
 	typedef std::vector<PlaylistFileDesc>::size_type size_type;
+	typedef Glib::ustring string_type;
     
     public:
-	PlaylistFile(const Glib::ustring &);
+	PlaylistFile(const string_type &);
 	
 	// FIXME: this could be better
-	void parse_file(const Glib::ustring &);
+	void parse_file(const string_type &);
 	
 	const std::vector<PlaylistFileDesc>& get_files() const {
 	    return files;
 	}
 	
-	std::vector<Glib::ustring> get_titles() const;
+	std::vector<string_type> get_titles() const;
 	
 	size_type size() const { return files.size(); }
 	
     private:
-	void _parse_equals(const Glib::ustring &, __gnu_cxx::hash_map<Glib::ustring, Glib::ustring>&);
+	void _parse_equals(const string_type &, __gnu_cxx::hash_map<string_type, string_type>&);
     
     private:
 	int numberofentries;
