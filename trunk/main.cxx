@@ -39,9 +39,14 @@
 #define _DEPRECIATED_FILESELECTION 0
 #define __C_VIDEO_HACK_
 
+#include "configuration.h"
 #include "dialog_boxes.h"
 #include "playlist.h"
 #include "playlist_widgets.h"
+#include "utility.h"
+
+/* globally constructed objects */
+dstream dout;
 
 class MainWindow : public Gtk::Window {
     public:
@@ -111,6 +116,7 @@ class MainWindow : public Gtk::Window {
 	ErrorDialog            m_NoStationsErrorDialog;
 	StationSelectionDialog m_SelectStationSSDialog;
 	
+	Configuration m_config;
 	Playlist playlist_data;
 	Glib::ustring m_current_genre_filter;
 	Glib::ustring m_current_search_filter;
@@ -122,8 +128,10 @@ class MainWindow : public Gtk::Window {
 
 
 MainWindow::MainWindow(int argc, char *argv[])
-     :m_NoStationsErrorDialog("This station has no channels, please choose another.")
+     :m_config(DEFAULT_CONFIG_PATH),
+      m_NoStationsErrorDialog("This station has no channels, please choose another.")
 {
+    // add option parsing stuff, need do have debug and help
     
     // Sets the border width of the window.
     set_title("streamlistings");
@@ -136,7 +144,7 @@ MainWindow::MainWindow(int argc, char *argv[])
     
     // make columns
     for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
-	//~ cout << "adding column to colgroup: " << *i << std::endl;
+	dout(9) << "adding column to colgroup: " << *i << std::endl;
 	m_Columns.add(*i);
     }
     
@@ -162,7 +170,7 @@ MainWindow::MainWindow(int argc, char *argv[])
 }
 
 MainWindow::~MainWindow(){
-    std::cout << "MainWindow::~MainWindow()" << std::endl;
+    dout(7) << "MainWindow::~MainWindow()" << std::endl;
     // cleanup curlpp
     curlpp::terminate();
     
@@ -182,7 +190,7 @@ void MainWindow::load_data(){
     playlist_data.clear();
     
     /* make this configurable */
-    std::cout << "### m_shoucast_url = " << shoutcast_url << std::endl;
+    dout(6) << "### m_shoucast_url = " << shoutcast_url << std::endl;
     //~ do{
 	try
 	{
@@ -207,7 +215,7 @@ void MainWindow::load_data(){
 	}
 	catch ( curlpp::exception & e )
 	{
-	    std::cout << ("+++CURLPP::ERROR : "  __FILE__ ":") << __LINE__ << ": " << e.what() << std::endl;
+	    dout(3) << ("+++CURLPP::ERROR : "  __FILE__ ":") << __LINE__ << ": " << e.what() << std::endl;
 	    //~ continue;
 	}
     
@@ -215,11 +223,11 @@ void MainWindow::load_data(){
 	try{
 	    playlist_data.parse_file(m_tmp_filename);
 	}catch(xmlpp::exception e){
-	    std::cout << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
+	    dout(3) << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
 	    //~ continue;
 	}catch(std::runtime_error e){
 	    if(Glib::ustring(e.what()) == Glib::ustring("Incorrect Number of playlists")){
-		std::cout << "Incorrect Number of playlists" << std::endl;
+		dout(3) << "Incorrect Number of playlists" << std::endl;
 		//~ continue;
 	    }
 	    throw;
@@ -243,24 +251,24 @@ void MainWindow::load_data(){
 }
 
 void MainWindow::reload(){
-    std::cout << "MainWindow::reload()" << std::endl;
+    dout(7) << "MainWindow::reload()" << std::endl;
     load_data();
 }
 
 void MainWindow::search(){
-    //~ cout << "MainWindow::search()" << std::endl;
+    dout(7) << "MainWindow::search()" << std::endl;
     m_current_search_filter = m_SearchEntry.get_text();
     
     m_TreeModelFilterRef->refilter();
 }
 
 void MainWindow::genre_filter(){
-    //~ cout << "MainWindow::genre_filter()" << std::endl;
-    //~ cout << "  Active Row Num: " << m_GenreCombo.get_active_row_number() << std::endl;
+    dout(7) << "MainWindow::genre_filter()" << std::endl;
+    dout(9) << "  Active Row Num: " << m_GenreCombo.get_active_row_number() << std::endl;
     if(m_GenreCombo.get_active_row_number() > -1){
 	Glib::ustring data("");
 	m_GenreCombo.get_model()->children()[m_GenreCombo.get_active_row_number()].get_value(0, data);
-	//~ cout << "  Selected: " << *(m_GenreCombo.get_active()) << " : " << data << std::endl;
+	dout(9) << "  Selected: " << *(m_GenreCombo.get_active()) << " : " << data << std::endl;
 	
 	// start filtering rows
 	m_current_genre_filter = data;
@@ -272,7 +280,7 @@ void MainWindow::genre_filter(){
 /**** START PRIVATE MEMBER FUNCTIONS  ****/
 /****                                                                                    ****/
 Gtk::Widget* MainWindow::_create_menu(){
-    std::cout << "MainWindow::_create_menu()" << std::endl;
+    dout(7) << "MainWindow::_create_menu()" << std::endl;
     //Create actions for menus and toolbars:
     m_refActionGroup = Gtk::ActionGroup::create();
     
@@ -289,6 +297,8 @@ Gtk::Widget* MainWindow::_create_menu(){
     //File menu:
     m_refActionGroup->add( Gtk::Action::create("FileMenu", "File") );
     m_refActionGroup->add( Gtk::Action::create("FileNew", Gtk::Stock::NEW) ); //Sub-menu.
+    m_refActionGroup->add( Gtk::Action::create("FileSavePrefs", Gtk::Stock::SAVE),
+	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
     m_refActionGroup->add( Gtk::Action::create("FileSaveAs", Gtk::Stock::SAVE_AS),
 	Gtk::AccelKey::AccelKey('s', Gdk::CONTROL_MASK),
 	sigc::mem_fun(*this, &MainWindow::_save_as) );
@@ -304,7 +314,7 @@ Gtk::Widget* MainWindow::_create_menu(){
     //Columns menu:
     m_refActionGroup->add( Gtk::Action::create("ColumnsMenu", "Columns") );
     for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
-	//~ std::cout << "adding action to actiongroup: " << *i << std::endl;
+	dout(9) << "adding action to actiongroup: " << *i << std::endl;
 	m_refActionGroup->add( Gtk::ToggleAction::create("Columns" + (*i), *i, Glib::ustring(), true),
 	    sigc::mem_fun(*this, &MainWindow::_reset_columns) );
     }
@@ -336,12 +346,13 @@ Gtk::Widget* MainWindow::_create_menu(){
 	    "<ui>"
 	    "  <menubar name='MenuBar'>"
 	    "    <menu action='FileMenu'>"
-	    "      <menu action='FileNew'>"
+	    "<!--      <menu action='FileNew'>"
 	    "        <menuitem action='FileNewStandard'/>"
 	    "        <menuitem action='FileNewFoo'/>"
 	    "        <menuitem action='FileNewGoo'/>"
-	    "      </menu>"
+	    "      </menu> -->"
 	    "      <separator/>"
+	    "      <menuitem action='FileSavePrefs'/>"
 	    "      <menuitem action='FileSaveAs'/>"
 	    "      <menuitem action='FileQuit'/>"
 	    "    </menu>"
@@ -352,7 +363,7 @@ Gtk::Widget* MainWindow::_create_menu(){
 	
 	Glib::ustring ui_info_columns; 
 	for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_properties().begin(); i != playlist_data.get_properties().end(); i++){
-	    //~ std::cout << "adding action to ui: " << *i << std::endl;
+	    dout(9) << "adding action to ui: " << *i << std::endl;
 	    ui_info_columns += ("      <menuitem action='Columns" + (*i) + "'/>");
 	}
 	
@@ -398,7 +409,7 @@ Gtk::Widget* MainWindow::_create_menu(){
 }
 
 Gtk::Widget* MainWindow::_create_topbar(){
-    std::cout << "MainWindow::_create_topbar()" << std::endl;
+    dout(7) << "MainWindow::_create_topbar()" << std::endl;
     // reload button
     m_ReloadButton.set_label(std::string("_Reload"));
     m_ReloadButton.set_use_underline();
@@ -436,7 +447,7 @@ Gtk::Widget* MainWindow::_create_topbar(){
 }
 
 Gtk::Widget* MainWindow::_create_liststore(){
-    std::cout << "MainWindow::_create_liststore()" << std::endl;
+    dout(7) << "MainWindow::_create_liststore()" << std::endl;
     
     // set columns in liststore
     m_ListStoreRef = Gtk::ListStore::create(m_Columns);
@@ -490,7 +501,7 @@ void MainWindow::_populate_genrefilter(){
     m_GenreCombo.append_text(Glib::ustring("ALL"));
     for(std::vector<Glib::ustring>::const_iterator i = playlist_data.get_genres().begin();
 	i != playlist_data.get_genres().end(); i++){
-	//~ std::cout << "Adding genre to genre filter: " << *i << std::endl;
+	dout(9) << "Adding genre to genre filter: " << *i << std::endl;
 	m_GenreCombo.append_text(*i);
     }
     //~ m_GenreCombo.append_text(std::string("Last Genre"));
@@ -498,14 +509,14 @@ void MainWindow::_populate_genrefilter(){
 }
 
 void MainWindow::_reset_columns(){
-    //~ std::cout << "MainWindow::_reset_columns" << std::endl;
+    dout(7) << "MainWindow::_reset_columns" << std::endl;
     m_PlaylistView.remove_all_columns();
     
     _create_columns();
 }
 
 void MainWindow::_create_columns(){
-    std::cout << "MainWindow::_create_columns()" << std::endl;
+    dout(7) << "MainWindow::_create_columns()" << std::endl;
     
     // make columns visible
     Glib::ListHandle<Glib::RefPtr<Gtk::Action> > m_ColumnsActions = m_refActionGroup->get_actions();
@@ -527,7 +538,7 @@ void MainWindow::_create_columns(){
 	Glib::RefPtr<Gtk::Action> refAction = m_refActionGroup->get_action(Glib::ustring("Columns") + (*i));
 	if(refAction && (Glib::RefPtr<Gtk::ToggleAction>::cast_static(refAction))->get_active()){
 	    //~ Glib::ustring columnName = (*i)->get_name().substr(7);
-	    //~ std::cout << "appending column: " << (*i) << "(" << (&m_Columns.get_column(*i)) << ")" << std::endl;
+	    dout(9) << "appending column: " << (*i) << "(" << (&m_Columns.get_column(*i)) << ")" << std::endl;
 	    m_PlaylistView.append_column(*i, m_Columns.get_column(*i));
 	}
     }
@@ -557,7 +568,7 @@ void MainWindow::_save_as(){
 #endif
     
     if(fcd.run()){
-	std::cout << "Chosen Filename" << fcd.get_filename() << std::endl;
+	dout(8) << "Chosen Filename" << fcd.get_filename() << std::endl;
 	playlist_data.saveto_file(fcd.get_filename());
     }
 }
@@ -565,13 +576,13 @@ void MainWindow::_save_as(){
 void MainWindow::_do_nothing(){}
 
 void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn* column){
-    std::cout << "MainWindow::_get_playlistfile()" << std::endl;
-    std::cout << "  " << column->get_title() << ": " << path.to_string() << std::endl;
-    std::cout << "  Playing MPlayer ..." << std::endl;
+    dout(7) << "MainWindow::_get_playlistfile()" << std::endl;
+    dout(5) << "  " << column->get_title() << ": " << path.to_string() << std::endl;
+    dout(5) << "  Playing MPlayer ..." << std::endl;
     
     // get the playstring
     Gtk::TreeModel::iterator iter = m_PlaylistView.get_model()->get_iter(path);
-    std::cout << "  activated row: " << path.to_string() << std::endl;
+    dout(9) << "  activated row: " << path.to_string() << std::endl;
     if(iter){
 	Glib::ustring playstring;
 	int id = -1;
@@ -584,10 +595,10 @@ void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeVi
 	
 	// get this id, so I can get which PlaylistEntry this is, so I can caache the results
 	iter->get_value(0, id);
-	std::cout << "  _id = " << id << " (" << 0 << ")" << std::endl;
+	dout(9) << "  _id = " << id << " (" << 0 << ")" << std::endl;
 	
 	iter->get_value(m_PlaylistView.get_model()->get_n_columns()-1, playstring);
-	std::cout << "  playstring = " << playstring << " (" << m_PlaylistView.get_model()->get_n_columns()-1 << ")" << std::endl;
+	dout(8) << "  playstring = " << playstring << " (" << m_PlaylistView.get_model()->get_n_columns()-1 << ")" << std::endl;
 	
 	Glib::ustring body;
 	try
@@ -618,73 +629,85 @@ void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeVi
 	    
 	    body = body_memory_trait.string();
 	    Glib::ustring header(header_memory_trait.string());
-	    //~ cout << body_memory_trait.length() << ":||" << body << "||" << std::endl;
-	    //~ cout << header_memory_trait.length() << ":||" << header << "||" << std::endl;
+	    dout(9) << body_memory_trait.length() << ":||" << body << "||" << std::endl;
+	    dout(9) << header_memory_trait.length() << ":||" << header << "||" << std::endl;
 	}
 	catch ( curlpp::exception & e )
 	{
-	  std::cout << "+++CURLPP::ERROR : " << e.what() << std::endl;
+	  dout(3) << "+++CURLPP::ERROR : " << e.what() << std::endl;
 	}
 	
 	PlaylistFile plsfile(body);
 	
 	for(std::vector<PlaylistFile::PlaylistFileDesc>::const_iterator i = plsfile.get_files().begin(); i != plsfile.get_files().end(); i++){
-	    std::cout << "=== Title: " << i->title << std::endl;
-	    std::cout << "=== File: " << i->filename << std::endl;
+	    dout(5) << "=== Title: " << i->title << std::endl;
+	    dout(5) << "=== File: " << i->filename << std::endl;
 	}
 	
 	Glib::ustring streamurl;
 	if(plsfile.size() <= 0){
 	    // not stations to choose from
 	    int ret = m_NoStationsErrorDialog.run();
-	    std::cout << ">>> Responseid = " << ret << std::endl;
+	    dout(8) << ">>> Responseid = " << ret << std::endl;
 	}else if(plsfile.size() == 1){
 	    // just play the station
 	    streamurl = plsfile.get_files()[0].filename;
 	}else{
 	    // popup dialogbox so user can chose a station
-	    std::cout << "<<<Choose Station>>>" << std::endl;
+	    dout(8) << "<<<Choose Station>>>" << std::endl;
 	    //~ Gtk::Dialog station_selection_Dialog("Choose Station", true, true);
 	    
 	    int which = m_SelectStationSSDialog.run(plsfile.get_titles());
-	    std::cout << ">>> Responseid = " << which << std::endl;
+	    dout(8) << ">>> Responseid = " << which << std::endl;
 	    
 	    assert(which > -1 && which < (int)plsfile.get_files().size());
-	    std::cout << "---| Title: " << plsfile.get_files()[which].title << std::endl;
-	    std::cout << "---| File: " << plsfile.get_files()[which].filename << std::endl;
+	    dout(3) << "---| Title: " << plsfile.get_files()[which].title << std::endl;
+	    dout(3) << "---| File: " << plsfile.get_files()[which].filename << std::endl;
 	    
 	    streamurl = plsfile.get_files()[which].filename;
 	}
 	
 	// send to mplayer
-	//~ std::cout << "mplayer -v -nocache '" << streamurl << "'" << std::endl;
+	//~ dout << "mplayer -v -nocache '" << streamurl << "'" << std::endl;
 	Glib::ustring player_cmd = string_subst(m_PreferencesDialog.get_player_cmd(), streamurl);
-	std::cout << player_cmd << std::endl;
+	dout(3) << player_cmd << std::endl;
 	//~ if(streamurl != "" && system(player_cmd.c_str()) == -1)
 	    //~ std::cout << "system() errored" << std::endl;
 	if(streamurl != ""){
 #ifdef __C_VIDEO_HACK_
+	    /* NOTE: it might be nice to do some command piping to MPlayer via
+	     * -input command, but this wouldn't be general for all players */
+	    
 	    //~ char *args[] = {};
 	    int stdout_fd = 1;
 	    pid_t pid = 0;
 	    pid = fork();
 	    if(pid == 0){
 		/* in child, do an exec */
+		/* put us in our new session, 
+		 * this should get rid of zombies */
+		setsid();
+		//~ setpgid(pid,0);
+		
+		/* FIXME:  do an execve (fuck it do it later) */
+		/* hmm, I don't see this on my console, but for some reason I've seen on
+		 * others where the app kills the shells stdout, but how can this do that?
+		 * After a fork() the closing of copied fd's don't close the fd in the other process*/
 		close(stdout_fd);
 		/* make the outpupt descriptor point to null so it doesn't interfere with streamlister output */
 		if(open("/dev/null", O_WRONLY) != stdout_fd){
-		    std::cout << "Error: open(\"/dev/null\", O_WRONLY) failed to open as stdout [" << stdout_fd << "]" << std::endl;
+		    dout(1) << "Error: open(\"/dev/null\", O_WRONLY) failed to open as stdout [" << stdout_fd << "]" << std::endl;
 		    exit(0);
 		}
 		if(streamurl != "" && system(player_cmd.c_str()) == -1)
-		    std::cout << "system() errored" << std::endl;
-		//~ std::cout << "NEVER REACH HERE!!" << std::endl;
+		    dout(1) << "system() errored" << std::endl;
+		//~ dout(1) << "NEVER REACH HERE!!" << std::endl;
 		exit(0);
 	    }
 #endif
 	}
     }else
-	std::cout << "iterator not valid? hmm, something fishy" << std::endl;
+	dout(3) << "iterator not valid? hmm, something fishy" << std::endl;
 }
 
 void MainWindow::_make_tmp_filename(){
@@ -693,7 +716,7 @@ void MainWindow::_make_tmp_filename(){
     std::ostringstream oss;
     oss << Glib::ustring("/tmp/streamlister.") << mypid;
     m_tmp_filename = oss.str();
-    std::cout << "  m_tmp_filename = " << m_tmp_filename << std::endl;
+    dout(7) << "  m_tmp_filename = " << m_tmp_filename << std::endl;
 }
 
 bool MainWindow::_playlist_filter(const Gtk::TreeModel::const_iterator& iter){
@@ -723,7 +746,8 @@ bool MainWindow::_rating_filter(const Gtk::TreeModel::const_iterator& iter){
 
 
 int main(int argc, char *argv[]){
-    std::cout << "XML shoutcast tvlisting Parser" << std::endl;
+    //~ dout.set_debug_level(9);
+    dout << "XML shoutcast tvlisting Parser" << std::endl;
     
     Gtk::Main kit(argc, argv);
     
