@@ -17,10 +17,13 @@
 
 #include <utility>
 #include <iostream>
+#include <memory>
 #include <functional>
 #include <string>
 #include <sstream>
 #include <cstring>
+#include <cstdlib>
+#include <cerrno>
 
 #if __GNUC__ == 3 && __GNUC_MINOR__ < 4
 #  include <ext/stl_hash_fun.h>
@@ -36,8 +39,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <errno.h>
+
+#ifdef HAVE_LIBZ
+#  include <zlib.h>
+#endif /* HAVE_LIBZ */
 
 #ifndef __UTILITY_H__
 #define __UTILITY_H__
@@ -219,5 +224,38 @@ namespace curlpp
     };
 } /*** END CURLPP TRAITS ***/
 #endif
+
+#ifdef HAVE_LIBZ
+inline
+std::auto_ptr<char> decompress(const char* pbuffer, const std::size_t buflen){
+    const int inflate_ratio = 10;
+    int olen = buflen*inflate_ratio;
+    std::auto_ptr<char> ap(static_cast<char*>(operator new(olen)));
+    
+uncmp:
+    int status = uncompress((Bytef*)ap.get(),
+			    (uLongf*)&olen,
+			    (Bytef*)pbuffer,
+			    (uLongf)buflen);
+    switch(status){
+	case Z_MEM_ERROR:
+	    dout(3) << "decompression failed: ran out of memory" << std::endl;
+	    return std::auto_ptr<char>();
+	case Z_DATA_ERROR:
+	    dout(3) << "decompression failed: input data corrupt" << std::endl;
+	    return std::auto_ptr<char>();
+	case Z_BUF_ERROR:
+	    dout(3) << "decompression failed: output buffer too small" << std::endl;
+	    // make decompression buffer 1/4 larger, and try again
+	    olen += (olen>>2);
+	    ap.reset(static_cast<char*>(operator new(olen)));
+	    goto uncmp;
+	case Z_OK: 
+	    ap.get()[olen]='\0';
+    }
+    
+    return ap;
+}
+#endif /* HAVE_LIBZ */
 
 #endif /* __UTILITY_H__ */
