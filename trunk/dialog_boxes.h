@@ -19,8 +19,12 @@
 #define __DIALOG_BOXES_H__
 
 #include <vector>
+#include <utility> // pair
 
 #include <gtkmm.h>
+
+#include "utility.h"
+#include "configuration.h"
 
 class ErrorDialog : public Gtk::Dialog {
     public:
@@ -61,18 +65,59 @@ class StationSelectionDialog : public Gtk::Dialog {
 	
 };
 
-class PreferencesDialog : public Gtk::Dialog{
+//~ template <typename T = Glib::ustring>
+class CheckboxListDialog : public Gtk::Dialog{
     public:
-	PreferencesDialog(const Glib::ustring &filename=Glib::ustring());
+	typedef Glib::ustring string_type;
+	typedef std::pair<string_type, bool> item_type;
+    
+    public:
+	//~ CheckboxListDialog(const string_type&, const std::vector<std::pair<string_type, bool> > & = (std::vector<std::pair<string_type, bool> >()));
+	CheckboxListDialog(const string_type&, const Configuration::itemlist_type &);
 	
 	void run();
 	
-	Glib::ustring get_url() const;
-	Glib::ustring get_player_cmd() const;
-	void save_prefs() const;
+	//~ void set_items(const std::vector<string_type> &);
+	const Configuration::itemlist_type & get_items() const{return m_vectorItems;}
+    
+    protected:
+	virtual void add_items(const Configuration::itemlist_type &);
+	virtual void on_response(int response_id);
+	//~ virtual void toggled(int);
+    
+    private:
+	std::vector<Gtk::HBox> m_vectorHBox;
+	std::vector<Gtk::CheckButton*> m_vectorpCheckButton;
+	std::vector<std::pair<string_type, bool> > m_vectorItems;
+};
+
+//~ class RatingsDialog : public CheckboxListDialog{
+    //~ public:
+	//~ typedef CheckboxListDialog::string_type string_type;
+    
+//~ };
+
+class PreferencesDialog : public Gtk::Dialog{
+    public:
+	typedef Glib::ustring string_type;
+    
+    public:
+	PreferencesDialog(const string_type &filename=string_type());
+	
+	void run();
+	
+	string_type get_url() const;
+	string_type get_player_cmd() const;
+	const Configuration::itemlist_type& get_columns() const;
+	const Configuration& get_config() const;
+	void save();
     
     protected:
 	virtual void on_response(int);
+    
+    private:
+	/* preferences data */
+	Configuration m_config;
     
     private:
 	Gtk::HBox  m_mainHBox;
@@ -90,16 +135,16 @@ class PreferencesDialog : public Gtk::Dialog{
 	Gtk::Entry m_PlayerEntry;
 	
 	Gtk::HBox   m_buttonHBox;
-	Gtk::Button m_Columns;
-	Gtk::Button m_Ratings;
+	Gtk::Button m_ColumnsButton;
+	Gtk::Button m_RatingsButton;
 	
-    
+	CheckboxListDialog m_ColumnsDialog;
+	//~ CheckboxListDialog m_RatingsDialog;
 };
 
 class AboutDialog : public Gtk::Dialog {
     public:
 	AboutDialog();
-    
 	void run();
     
     protected:

@@ -21,9 +21,14 @@
 #include <iostream>
 
 #include <vector>
+#include <iterator>  // back_inserter
+#include <algorithm> // transform
 
 #include "dialog_boxes.h"
 #include "playlist.h"
+
+//~ template <typename str>
+//~ static std::pair<str, bool> get_item(Gtk::CheckButton *);
 
 /*** class ErrorDialog ***/
 ErrorDialog::ErrorDialog(const Glib::ustring &errstr)
@@ -45,7 +50,6 @@ void ErrorDialog::on_response(int response_id){
 }
 
 /*** class StationSelectionDialog ***/
-
 StationSelectionDialog::StationSelectionDialog()
 	:Gtk::Dialog("Choose Station", true, true),m_selectLabel("Please Select Station"),
 	 m_okButton("_Ok", true),m_cancelButton("_Cancel", true)
@@ -97,22 +101,72 @@ void StationSelectionDialog::_ok_clicked(){
     Gtk::Dialog::response(atoi(selected_path.to_string().c_str()));
 }
 
+/*** class CheckboxListDialog ***/
+CheckboxListDialog::CheckboxListDialog(const CheckboxListDialog::string_type &title, const std::vector<std::pair<CheckboxListDialog::string_type, bool> > &items)
+	:Gtk::Dialog(title, false, true)
+{
+    dout(1) << "CheckboxListDialog::CheckboxListDialog( ... )" << std::endl;
+    add_items(items);
+    add_button("_OK", 1);
+    add_button("_Cancel", 0);
+    show_all_children();
+}
+
+void CheckboxListDialog::run(){
+    Gtk::Dialog::run();
+}
+
+void CheckboxListDialog::add_items(const std::vector<std::pair<string_type, bool> > &items){
+    /* Just add items in order given */
+    if(items.size()){
+	int j = 0;
+	for(std::vector<std::pair<string_type, bool> >::const_iterator i = items.begin(); i != items.end(); i++, j++){
+	    Gtk::CheckButton *pCB = new Gtk::CheckButton(i->first);
+	    pCB->set_active(i->second);
+	    get_vbox()->add(*pCB);
+	    m_vectorpCheckButton.push_back(pCB);
+	    //~ m_vectorItems.push_back(std::make_pair(*i, false));
+	    m_vectorItems.push_back(*i);
+	    
+	    //~ pCB->signal_toggled().connect(sigc::bind<int>( sigc::mem_fun(*this, &CheckboxListDialog::toggled), j));
+	}
+    }
+}
+
+void CheckboxListDialog::on_response(int response_id){
+    hide();
+    if(response_id){
+	/* they pressed OK, so save state */
+	m_vectorItems.clear();
+	for(std::vector<Gtk::CheckButton*>::iterator i = m_vectorpCheckButton.begin(); i != m_vectorpCheckButton.end(); i++){
+	    m_vectorItems.push_back(std::make_pair((*i)->get_label(), (*i)->get_active()));
+	}
+	//~ std::transform(m_vectorpCheckButton.begin(), m_vectorpCheckButton.end(),
+		       //~ std::back_inserter(m_vectorItems), );
+    }else{
+	/* set widget back to previous values */
+	assert(m_vectorpCheckButton.size() == m_vectorItems.size());
+	std::vector<std::pair<string_type, bool> >::iterator j = m_vectorItems.begin();
+	for(std::vector<Gtk::CheckButton*>::iterator i = m_vectorpCheckButton.begin(); i != m_vectorpCheckButton.end(); i++, j++){
+	    (*i)->set_active(j->second);
+	}
+    }
+}
+
 /*** class PreferencesDialog ***/
 PreferencesDialog::PreferencesDialog(const Glib::ustring &filename)
-	:Gtk::Dialog("Preferences", false, true),
+	:Gtk::Dialog("Preferences", false, true),m_config(filename),
+	 m_ColumnsDialog("Choose Columns to display", m_config.get_columns()),
 	 m_numberLabel("Number of entries to get: "),
 	 m_URLLabel("URL of XML file: "),
 	 m_PlayerLabel("player command: "),
-	 m_Columns("_Columns", true),m_Ratings("_Ratings", true)
+	 m_ColumnsButton("_Columns", true),m_RatingsButton("_Ratings", true)
 {
+    dout(1) << "PreferencesDialog::PreferencesDialog(" << filename << ")" << std::endl;
     dout(9) << "m_URLEntry.get_width_chars(): " << m_URLEntry.get_width_chars() << std::endl;
     
-    /* read preferences from file */
-    
-    /* set default preferences */
-    m_numberEntry.set_text(DEFAULT_NUMBER_ENTRIES);
-    m_URLEntry.set_text(SHOUTCAST_URL);
-    m_PlayerEntry.set_text(PLAYER_CMD);
+    m_ColumnsButton.signal_clicked().connect(sigc::mem_fun(m_ColumnsDialog, &CheckboxListDialog::run));
+    //~ m_RatingsButton.signal_clicked().connect(sigc::mem_fun(m_ColumnsDialog, &CheckboxListDialog::run));
     
     /* make gui */
     //~ set_size_request(300, 200);
@@ -126,39 +180,61 @@ PreferencesDialog::PreferencesDialog(const Glib::ustring &filename)
     m_leftVBox.pack_start(m_PlayerLabel, Gtk::PACK_EXPAND_PADDING);
     m_rightVBox.pack_start(m_PlayerEntry, Gtk::PACK_SHRINK);
     
-    m_buttonHBox.pack_start(m_Columns, Gtk::PACK_SHRINK);
-    m_buttonHBox.pack_start(m_Ratings, Gtk::PACK_SHRINK);
+    m_buttonHBox.pack_start(m_ColumnsButton, Gtk::PACK_SHRINK);
+    m_buttonHBox.pack_start(m_RatingsButton, Gtk::PACK_SHRINK);
     m_mainHBox.pack_start(m_leftVBox, Gtk::PACK_SHRINK);
     m_mainHBox.pack_start(m_rightVBox, Gtk::PACK_SHRINK);
     get_vbox()->pack_start(m_mainHBox);
     get_vbox()->pack_start(m_buttonHBox);
     add_button("_OK", 1);
-    add_button("_Cancel", 2);
+    add_button("_Cancel", 0);
     show_all_children();
 }
 
-void PreferencesDialog::save_prefs() const {
+void PreferencesDialog::save() {
     /* save prefs in here */
+    m_config.save();
 }
 
 void PreferencesDialog::run(){
+    /* make sure the real entries are in there */
+    m_numberEntry.set_text(m_config.get_num_entries());
+    m_URLEntry.set_text(m_config.get_url());
+    m_PlayerEntry.set_text(m_config.get_player_cmd());
+    //~ m_columns;
+    //~ m_ratings;
     Gtk::Dialog::run();
 }
 
 void PreferencesDialog::on_response(int response_id){
     hide();
+    if(response_id){
+	/* they pressed OK, so save the prefs */
+	m_config.set_num_entries(m_numberEntry.get_text());
+	m_config.set_url(m_URLEntry.get_text());
+	m_config.set_player_cmd(m_PlayerEntry.get_text());
+	//~ m_columns;
+	//~ m_ratings;
+    }
 }
 
-Glib::ustring PreferencesDialog::get_url() const{
-    return string_subst(m_URLEntry.get_text(), m_numberEntry.get_text());
+Glib::ustring PreferencesDialog::get_url() const {
+    return string_subst(m_config.get_url(), m_config.get_num_entries());
 }
 
-Glib::ustring PreferencesDialog::get_player_cmd() const{
-    return m_PlayerEntry.get_text();
+Glib::ustring PreferencesDialog::get_player_cmd() const {
+    return m_config.get_player_cmd();
+}
+
+const Configuration::itemlist_type& PreferencesDialog::get_columns() const {
+    return m_config.get_columns();
+}
+
+const Configuration& PreferencesDialog::get_config() const {
+    return m_config;
 }
 
 /*** class AboutDialog ***/
-
 AboutDialog::AboutDialog()
 	:Gtk::Dialog("About", true, true),
 	 m_authorLabel("(C) crass"),
