@@ -15,7 +15,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <cstdlib>
+#include <cassert>
+#include <stdexcept>
+
+#include <iostream>
+
+#include "utility.h"
+
+#include <ext/hash_set>
+#include <ext/hash_map>
+
 #include "playlist.h"
+//~ #include "utility.h"
 
 /*** class PlaylistEntry ***/
 
@@ -62,23 +74,23 @@ std::ostream& PlaylistEntry::print(std::ostream& out) const{
 }
 
 // accessor functions
-std::string PlaylistEntry::get_data(const std::string& which) const {
-    std::string retstr("");
-    if (std::string("Name") == which){
+PlaylistEntry::string_type PlaylistEntry::get_data(const PlaylistEntry::string_type& which) const {
+    PlaylistEntry::string_type retstr("");
+    if (PlaylistEntry::string_type("Name") == which){
 	retstr = name;
-    }else if(std::string("StationID") == which){
+    }else if(PlaylistEntry::string_type("StationID") == which){
 	retstr = stationid;
-    }else if(std::string("Genre") == which){
+    }else if(PlaylistEntry::string_type("Genre") == which){
 	retstr = genre;
-    }else if(std::string("Nowplaying") == which){
+    }else if(PlaylistEntry::string_type("Nowplaying") == which){
 	retstr = nowplaying;
-    }else if(std::string("Listeners") == which){
+    }else if(PlaylistEntry::string_type("Listeners") == which){
 	retstr = listeners;
-    }else if(std::string("Bitrate") == which){
+    }else if(PlaylistEntry::string_type("Bitrate") == which){
 	retstr = bitrate;
-    }else if(std::string("Rating") == which){
+    }else if(PlaylistEntry::string_type("Rating") == which){
 	retstr = rating;
-    }else if(std::string("Playstring") == which){
+    }else if(PlaylistEntry::string_type("Playstring") == which){
 	retstr = playstring;
     }
     return retstr;
@@ -100,10 +112,12 @@ std::ostream& operator << (std::ostream &out, const PlaylistEntry& pe){
 
 /*** class Playlist ***/
 
-Playlist::Playlist(const std::string &file){
-    std::cout << "Playlist::Playlist()" << std::endl;
+Playlist::Playlist(const Playlist::string_type &file){
+    dout(7) << "Playlist::Playlist()" << std::endl;
     m_filename = file;
     
+    /* FIXME: These are the statically defined tags, but for this to be more general this
+     * should be dynamic based on tags as we see them */
     m_properties.push_back("Name");
     m_properties.push_back("StationID");
     m_properties.push_back("Genre");
@@ -120,9 +134,15 @@ Playlist::Playlist(const std::string &file){
 void Playlist::clear() { m_numEntries = 0; m_label = ""; 
     m_entries.clear(); m_genre_list.clear(); }
 
-void Playlist::parse_file(const std::string & file){
+void Playlist::parse_memory(const Playlist::string_type &data){
+    dout(7) << "Parsing memory" << std::endl;
+    m_xmldocument.parse_memory(data);
+    _parse_document();
+}
+
+void Playlist::parse_file(const Playlist::string_type & file){
     
-    std::string filename(file);
+    Playlist::string_type filename(file);
     if (filename == ""){
 	if (m_filename != "")
 	    filename = m_filename;
@@ -130,20 +150,26 @@ void Playlist::parse_file(const std::string & file){
 	    throw std::runtime_error("No file specified");
     }
     
-    std::cout << "Parsing file: " << filename << std::endl;
+    dout(7) << "Parsing file: " << filename << std::endl;
     
     m_xmldocument.parse_file(filename);
+    _parse_document();
+}
+    
+void Playlist::_parse_document(){
+    // empty the old playlist
+    clear();
     
     xmlpp::Document *doc = m_xmldocument.get_document();
     
     xmlpp::Element *cur_element = doc->get_root_node();
     
-    std::cout << "path: " << cur_element->get_path() << std::endl;
+    dout(9) << "path: " << cur_element->get_path() << std::endl;
     
     xmlpp::Node::NodeList playlists = cur_element->get_children(std::string("playlist"));
     
     if (playlists.size() != 1){
-	std::cout << "0 or more than 1 playlists: " << playlists.size() << std::endl;
+	std::cerr << "0 or more than 1 playlists: " << playlists.size() << std::endl;
 	throw std::runtime_error("Incorrect Number of playlists");
     }
     
@@ -154,7 +180,7 @@ void Playlist::parse_file(const std::string & file){
     
     xmlpp::Element::AttributeList::iterator i = attrlist.begin();
     for(;i != attrlist.end(); i++){
-	std::cout << "Name: " << (*i)->get_name() << ", Value: " << (*i)->get_value() << std::endl;
+	dout(9) << "Name: " << (*i)->get_name() << ", Value: " << (*i)->get_value() << std::endl;
     }
     
     xmlpp::NodeSet nset = cur_element->find(std::string("entry"));
@@ -183,13 +209,13 @@ void Playlist::parse_file(const std::string & file){
     std::partial_sort_copy(ratings_hashset.begin(), ratings_hashset.end(),
 			   m_ratings.begin(), m_ratings.end());
     
-    std::cout << "m_ratings.size() = " << m_ratings.size() << std::endl;
+    dout(9) << "m_ratings.size() = " << m_ratings.size() << std::endl;
     for(std::vector<Glib::ustring>::iterator i = m_ratings.begin(); i != m_ratings.end(); i++){
 	std::cout << *i << std::endl;
     }
 }
 
-bool Playlist::saveto_file(const std::string &filename){
+bool Playlist::saveto_file(const Playlist::string_type &filename){
     //~ m_xmldocument.get_document()->write_to_file(filename);
     m_xmldocument.get_document()->write_to_file_formatted(filename);
     return true;
@@ -205,26 +231,26 @@ bool Playlist::saveto_file(const std::string &filename){
 
 /*** class PlaylistFile ***/
 
-PlaylistFile::PlaylistFile(const Glib::ustring &plsfile):numberofentries(0),version(0){
+PlaylistFile::PlaylistFile(const PlaylistFile::string_type &plsfile):numberofentries(0),version(0){
     parse_file(plsfile);
 }
 
 // FIXME: this could be better
-void PlaylistFile::parse_file(const Glib::ustring &plsfile){
+void PlaylistFile::parse_file(const PlaylistFile::string_type &plsfile){
     // parse the pls file
     if (plsfile.compare(0, 10, "[playlist]") == 0){
-	std::cout << "found playlist header" << std::endl;
+	dout(8) << "found playlist header" << std::endl;
 	
-	__gnu_cxx::hash_map<Glib::ustring, Glib::ustring> map;
+	__gnu_cxx::hash_map<PlaylistFile::string_type, PlaylistFile::string_type> map;
 	
 	_parse_equals(plsfile.substr(10), map);
 	
-	__gnu_cxx::hash_map<Glib::ustring, Glib::ustring>::iterator iter = map.find("numberofentries");
+	__gnu_cxx::hash_map<PlaylistFile::string_type, PlaylistFile::string_type>::iterator iter = map.find("numberofentries");
 	if(iter != map.end()){
 	    numberofentries = atoi((iter->second).c_str());
 	    
 	    PlaylistFileDesc pls_desc;
-	    Glib::ustring usFile("File_"), usTitle("Title_"), usLength("Length_");
+	    PlaylistFile::string_type usFile("File_"), usTitle("Title_"), usLength("Length_");
 	    for(int i=0; i < numberofentries; i++){
 		// index starts at 1
 		//~ usFile.assign(4, (char)('1' + i));
@@ -238,19 +264,19 @@ void PlaylistFile::parse_file(const Glib::ustring &plsfile){
 		if(iter != map.end()){
 		    pls_desc.filename = (*iter).second;
 		}else
-		    std::cout << "+++ERROR: could not find key: " << usFile << std::endl;
+		    std::cerr << "+++ERROR: could not find key: " << usFile << std::endl;
 		
 		iter = map.find(usTitle);
 		if(iter != map.end()){
 		    pls_desc.title = (*iter).second;
 		}else
-		    std::cout << "+++ERROR: could not find key: " << usTitle << std::endl;
+		    std::cerr << "+++ERROR: could not find key: " << usTitle << std::endl;
 		
 		iter = map.find(usLength);
 		if(iter != map.end()){
 		    pls_desc.length = atoi((iter->second).c_str());
 		}else
-		    std::cout << "+++ERROR: could not find key: " << usLength << std::endl;
+		    std::cerr << "+++ERROR: could not find key: " << usLength << std::endl;
 		
 		files.push_back(pls_desc);
 	    }
@@ -258,15 +284,15 @@ void PlaylistFile::parse_file(const Glib::ustring &plsfile){
 	    if((iter = map.find("Version")) != map.end()){
 		version = atoi((iter->second).c_str());
 	    }else
-		std::cout << "+++ERROR: could not find 'Version'" << std::endl;
+		std::cerr << "+++ERROR: could not find 'Version'" << std::endl;
 	    
 	}else
-	    std::cout << "+++ERROR: could not find 'numberofentries'" << std::endl;
+	    std::cerr << "+++ERROR: could not find 'numberofentries'" << std::endl;
 	
     }else{
 	// throw exception
 	
-	std::cout << "+++ERROR: could not find playlist header" << std::endl;
+	std::cerr << "+++ERROR: could not find playlist header" << std::endl;
     }
     
 }
@@ -275,8 +301,8 @@ void PlaylistFile::parse_file(const Glib::ustring &plsfile){
     //~ return files;
 //~ }
 
-std::vector<Glib::ustring> PlaylistFile::get_titles() const{
-    std::vector<Glib::ustring> titles;
+std::vector<PlaylistFile::string_type> PlaylistFile::get_titles() const{
+    std::vector<PlaylistFile::string_type> titles;
     for(std::vector<PlaylistFileDesc>::const_iterator i = files.begin(); i != files.end(); i++){
 	titles.push_back(i->title);
     }
@@ -285,13 +311,13 @@ std::vector<Glib::ustring> PlaylistFile::get_titles() const{
 
 //~ size_type PlaylistFile::size() const { return files.size(); }
 
-void PlaylistFile::_parse_equals(const Glib::ustring &file, __gnu_cxx::hash_map<Glib::ustring, Glib::ustring>& map){
-    std::string::size_type pos = std::string::npos, prev_pos = 0, eq_pos = std::string::npos;
+void PlaylistFile::_parse_equals(const PlaylistFile::string_type &file, __gnu_cxx::hash_map<PlaylistFile::string_type, PlaylistFile::string_type>& map){
+    PlaylistFile::string_type::size_type pos = PlaylistFile::string_type::npos, prev_pos = 0, eq_pos = PlaylistFile::string_type::npos;
     // loop over every line and divide into (key, value) pairs separated by '='
-    while ((pos = file.find('\n', prev_pos)) != std::string::npos){
+    while ((pos = file.find('\n', prev_pos)) != PlaylistFile::string_type::npos){
 	eq_pos = file.find('=', prev_pos);
 	    
-	if(eq_pos != std::string::npos && eq_pos < pos){
+	if(eq_pos != PlaylistFile::string_type::npos && eq_pos < pos){
 	    //~ std::cout << "  Key: |" << file.substr(prev_pos, eq_pos - prev_pos) << "|" << std::endl;
 	    //~ std::cout << "  Value: %" << file.substr(eq_pos+1, pos - (eq_pos+1)) << "%" << std::endl;
 	    map[file.substr(prev_pos, eq_pos - prev_pos)] = file.substr(eq_pos+1, pos - (eq_pos+1));
