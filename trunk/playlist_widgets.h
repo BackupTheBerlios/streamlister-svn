@@ -106,7 +106,7 @@ PlaylistColumns<T>::PlaylistColumns()
 template <class T>
 void
 PlaylistColumns<T>::add(const PlaylistColumns<T>::key_type& name){
-    typename PlaylistColumns<T>::column_type& column = *(new PlaylistColumns<T>::column_type);
+    typename PlaylistColumns<T>::column_type& column = *(new typename PlaylistColumns<T>::column_type);
     //~ std::cout << "PlaylistColumns::add() : " << name << "(" << (&column) << ")" << std::endl;
     column_ordering.push_back(name);
     column_mapping[name] = &column;
