@@ -1,0 +1,96 @@
+2004-12-14 08:06  crass
+
+	* trunk/configure.in: update version
+
+2004-12-14 08:06  crass
+
+	* trunk/Makefile.am: add configuration.h to list of headers
+
+2004-12-14 08:05  crass
+
+	* trunk/playlist.h: add default config path
+
+2004-12-14 08:04  crass
+
+	* trunk/configuration.h: add configuration header
+
+2004-12-14 08:03  crass
+
+	* trunk/main.cxx: convert debugging couot's to dout's, add
+	  beginnings of config
+
+2004-12-14 07:48  crass
+
+	* trunk/dialog_boxes.cxx, trunk/dialog_boxes.h: add Columns and
+	  Ratings buttons, make form layout better, add save_prefs (not
+	  fully implemented)
+
+2004-12-14 07:46  crass
+
+	* trunk/utility.h: add dstream class, that is a debugging stream
+	  class inheriting from ostream, add file_exists() to test for
+	  existence of files
+
+2004-12-11 10:11  crass
+
+	* trunk/main.cxx: change MainWindow constructor to take (int argc,
+	  char *argv[]) instead of Glib::ustring so it can parse the command
+	  line, add quick hack for playing video, in MainWindow constructor
+	  catch some known exceptions and continue, instead of not catching
+	  and dying
+
+2004-12-11 10:07  crass
+
+	* trunk/playlist.cxx, trunk/playlist.h: change m_genre_list to hold
+	  Glib::ustring instead of std:string, change parse_file to throw
+	  exceptions and return void, add m_ratings that is a set of ratings
+
+2004-12-11 10:02  crass
+
+	* trunk/utility.h: gcc 3.4.x changes the name of stl_hash_fun.h to
+	  hash_fun.h, so check which compiler is being used
+
+2004-12-11 10:01  crass
+
+	* trunk/playlist_widgets.h: add typename to keep gcc 3.4.x happy
+
+2004-12-07 21:50  crass
+
+	* trunk/Makefile.am: add maintainer-config, memusage-png, and
+	  download_streamlisting targets
+
+2004-12-07 21:49  crass
+
+	* trunk/dialog_boxes.cxx, trunk/dialog_boxes.h: add
+	  PreferencesDialog
+
+2004-12-07 21:47  crass
+
+	* trunk/playlist_widgets.cxx, trunk/playlist_widgets.h: take out
+	  PlaylistFile code and put in main, comment some debugging lines
+
+2004-12-07 21:45  crass
+
+	* trunk/playlist.cxx, trunk/playlist.h: move defines into header,
+	  add saveto_file for saving the xml list
+
+2004-12-07 21:42  crass
+
+	* trunk/main.cxx: add preferences, convert tvlister -> streamlister,
+	  add save as support, move PlaylistFile handling into main from
+	  PlaylistView
+
+2004-12-07 21:16  crass
+
+	* trunk/utility.h: add string_subst() which does seach replace on a
+	  string for all substrings of a given search string
+
+2004-11-23 22:11  crass
+
+	* trunk, trunk/AUTHORS, trunk/BUGS, trunk/COPYING, trunk/ChangeLog,
+	  trunk/INSTALL, trunk/Makefile.am, trunk/NEWS, trunk/README,
+	  trunk/autogen.sh, trunk/configure.in, trunk/dialog_boxes.cxx,
+	  trunk/dialog_boxes.h, trunk/main.cxx, trunk/playlist.cxx,
+	  trunk/playlist.h, trunk/playlist_widgets.cxx,
+	  trunk/playlist_widgets.h, trunk/utility.h: initial import
+
