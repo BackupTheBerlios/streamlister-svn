@@ -31,13 +31,33 @@
 class Configuration{
     public:
 	typedef Glib::ustring string_type;
+	typedef std::pair<string_type, bool> item_type;
+	typedef std::vector<item_type> itemlist_type;
     
     public:
 	Configuration(const string_type &file = string_type());
 	
 	void parse_config(const string_type &file = string_type());
 	//~ void save_config(const string_type &file = string_type());
-	void save_config();
+	void save();
+	
+	/* Getters */
+	string_type get_configfile() const {return m_configfile;}
+	string_type get_player_cmd() const {return m_player_cmd;}
+	string_type get_url() const {return m_url;}
+	string_type get_num_entries() const {return m_num_entries;}
+	bool get_cache_pls() const {return m_cache_pls;}
+	const itemlist_type& get_columns() const {return m_columns;}
+	const itemlist_type& get_ratings() const {return m_ratings;}
+	
+	/* Setters */
+	void set_configfile(const string_type &s){m_configfile = s;}
+	void set_player_cmd(const string_type &s){m_player_cmd = s;}
+	void set_url(const string_type &s){m_url = s;}
+	void set_num_entries(const string_type &s){m_num_entries = s;}
+	void set_cache_pls(bool b){m_cache_pls = b;}
+	void set_columns(itemlist_type);
+	void set_ratings(itemlist_type);
 	
 	//~ Glib::ustring operator [](const string_type& k){
 	    
@@ -55,15 +75,15 @@ class Configuration{
 	static void (Configuration::*_parse_fun_array[])(xmlpp::Element *);
     
     private:
-	Glib::ustring m_configfile;
-	Glib::ustring m_player_cmd;
-	Glib::ustring m_url;
-	Glib::ustring m_num_entries;
+	string_type m_configfile;
+	string_type m_player_cmd;
+	string_type m_url;
+	string_type m_num_entries;
 	
 	bool m_cache_pls;
 	
-	std::vector<std::pair<string_type, bool> > m_columns;
-	std::vector<std::pair<string_type, bool> > m_ratings;
+	itemlist_type m_columns;
+	itemlist_type m_ratings;
 	//~ __gnu_cxx::hash_set<string_type> columns;
 	//~ __gnu_cxx::hash_set<string_type> ratings;
 	

@@ -45,6 +45,7 @@ Configuration::Configuration(const Glib::ustring &file)
      m_player_cmd(PLAYER_CMD),m_url(SHOUTCAST_URL),
      m_num_entries(DEFAULT_NUMBER_ENTRIES),m_cache_pls(DEFAULT_CACHE_PLS)
 {
+    dout(1) << "Configuration::Configuration(" << file << ")" << std::endl;
     if(m_configfile != ""){
 	parse_config(m_configfile);
     }
@@ -67,6 +68,7 @@ Configuration::Configuration(const Glib::ustring &file)
 }
 
 void Configuration::parse_config(const Glib::ustring &file){
+    dout(1) << "Configuration::parse_config(" << file << ")" << std::endl;
     
     if (file == ""){
 	if (m_configfile == "")
@@ -109,8 +111,8 @@ void Configuration::parse_config(const Glib::ustring &file){
 }
 
 //~ void Configuration::save_config(const Glib::ustring &file){
-void Configuration::save_config(){
-    dout(3) << "Configuration::save_config(): " << m_configfile << std::endl;
+void Configuration::save(){
+    dout(3) << "Configuration::save(): " << m_configfile << std::endl;
     
 }
 
