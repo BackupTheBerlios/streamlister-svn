@@ -1,4 +1,8 @@
 
+#include <string>
+#include <ext/stl_hash_fun.h>
+#include <glibmm.h>
+
 #ifndef __UTILITY_H__
 #define __UTILITY_H__
 
@@ -18,5 +22,28 @@ namespace __gnu_cxx
 } // END namespace __gnu_cxx
 
 enum {LEFT_MOUSE_BUTTON=1, MIDDLE_MOUSE_BUTTON=2, RIGHT_MOUSE_BUTTON=3};
+
+//~ template <class T = int, int S = 0>
+//~ void test_func(T arg = S){
+    //~ std::cout << "test_func(): " << arg << std::endl;
+    //~ std::cout << "int(): " << int() << std::endl;
+//~ }
+
+#if 0
+template <class T, const char *S = "%s">
+#else
+template <class T>
+#define S "%s"
+#endif
+T string_subst(const T& str, const T& replace, const T& search=T(S)){
+    typename T::size_type pos = 0;
+    T ret_str(str);
+    while((pos = ret_str.find(search, pos)) != T::npos){
+	ret_str.replace(pos, search.size(), replace);
+    }
+    //~ std::cout << "string_subst(): " << ret_str << std::endl;
+    return ret_str;
+}
+#undef S
 
 #endif /* __UTILITY_H__ */
