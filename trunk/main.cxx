@@ -175,12 +175,21 @@ MainWindow::~MainWindow(){
     curlpp::terminate();
     
     // kill temp file if it exists
-    struct stat temp_buf;
-    if(stat(m_tmp_filename.c_str(), &temp_buf) != -1){
+    //~ struct stat temp_buf;
+    //~ if(stat(m_tmp_filename.c_str(), &temp_buf) != -1){
+	//~ if(unlink(m_tmp_filename.c_str()) == -1){
+	    //~ std::cerr << "Unable to unlink(): " << m_tmp_filename.c_str() << std::endl;
+	//~ }
+    //~ }
+    // kill temp file if it exists
+    if(file_exists(m_tmp_filename)){
 	if(unlink(m_tmp_filename.c_str()) == -1){
 	    std::cerr << "Unable to unlink(): " << m_tmp_filename.c_str() << std::endl;
 	}
     }
+    
+    /* save prefs */
+    m_config.save_config();
 }
 
 void MainWindow::load_data(){
@@ -297,10 +306,10 @@ Gtk::Widget* MainWindow::_create_menu(){
     //File menu:
     m_refActionGroup->add( Gtk::Action::create("FileMenu", "File") );
     m_refActionGroup->add( Gtk::Action::create("FileNew", Gtk::Stock::NEW) ); //Sub-menu.
-    m_refActionGroup->add( Gtk::Action::create("FileSavePrefs", Gtk::Stock::SAVE),
-	sigc::mem_fun(*this, &MainWindow::_do_nothing) );
+    m_refActionGroup->add( Gtk::Action::create("FileSavePrefs", Gtk::Stock::SAVE, "_Save Prefs"),
+	sigc::mem_fun(m_config, &Configuration::save_config) );
     m_refActionGroup->add( Gtk::Action::create("FileSaveAs", Gtk::Stock::SAVE_AS),
-	Gtk::AccelKey::AccelKey('s', Gdk::CONTROL_MASK),
+	Gtk::AccelKey::AccelKey('s', Gdk::CONTROL_MASK | Gdk::SHIFT_MASK),
 	sigc::mem_fun(*this, &MainWindow::_save_as) );
     m_refActionGroup->add( Gtk::Action::create("FileQuit", Gtk::Stock::QUIT),
 	sigc::mem_fun(*this, &MainWindow::hide) );
@@ -308,7 +317,7 @@ Gtk::Widget* MainWindow::_create_menu(){
     
     //Edit menu:
     m_refActionGroup->add( Gtk::Action::create("EditMenu", "Edit") );
-    m_refActionGroup->add( Gtk::Action::create("EditPreferences", "_Preferences"),
+    m_refActionGroup->add( Gtk::Action::create("EditPreferences", Gtk::Stock::PREFERENCES, "_Preferences"),
 	sigc::mem_fun(*this, &MainWindow::_run_preferences) );
     
     //Columns menu:
@@ -558,6 +567,7 @@ void MainWindow::_run_preferences(){
 }
     
 void MainWindow::_save_as(){
+    int run_ret = -1;
     // setup save as file chooser dialog
 #ifdef _DEPRECIATED_FILESELECTION
     Gtk::FileSelection fcd("Save XML Listing As");
@@ -567,8 +577,12 @@ void MainWindow::_save_as(){
     fcd.add_button("_Ok", 1);
 #endif
     
-    if(fcd.run()){
-	dout(8) << "Chosen Filename" << fcd.get_filename() << std::endl;
+    if(run_ret = fcd.run()){
+	dout(8) << "Chosen Filename: " << fcd.get_filename() << std::endl;
+	dout(9) << "run_ret: " << run_ret << std::endl;
+#ifdef _DEPRECIATED_FILESELECTION
+	if(run_ret == -5) /* this sucks, -5 seems to == OK :/ */
+#endif
 	playlist_data.saveto_file(fcd.get_filename());
     }
 }
