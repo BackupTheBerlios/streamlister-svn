@@ -8,7 +8,7 @@ AC_CONFIG_SRCDIR([playlist.cxx])
 AM_INIT_AUTOMAKE([no-define dist-bzip2])
 
 # Enable arguments
-AC_ARG_ENABLE(zlib, [  --enable-zlib           include support for compressed streams using zlib])
+AC_ARG_ENABLE(zlib, [  --enable-zlib           include support for compressed streams using zlib (default=enable)], , enable_zlib=yes)
 
 # Checks for programs.
 AC_PROG_CXX
@@ -37,7 +37,9 @@ dnl PKG_CHECK_MODULES([CURLPP], [curlpp >= 0.3.2-rc2], [], [])
 dnl Only need this till curlpp project make a pkg-config module
 AC_CHECK_PROG([CURLPP_CONFIG], [curlpp-config], [yes], [no])
 if test "x$CURLPP_CONFIG" = "xyes"; then
+    AC_MSG_CHECKING(curlpp version)
     CURLPP_VERSION=`curlpp-config --version`
+    AC_MSG_RESULT($CURLPP_VERSION)
     if test "x$CURLPP_VERSION" = "xlibcurlpp 0.3.2-rc2"; then
 	AC_MSG_CHECKING(CURLPP_CFLAGS)
 	CURLPP_CFLAGS=`curlpp-config --cflags`
@@ -46,8 +48,17 @@ if test "x$CURLPP_CONFIG" = "xyes"; then
 	AC_MSG_CHECKING(CURLPP_LIBS)
 	CURLPP_LIBS=`curlpp-config --libs`
 	AC_MSG_RESULT($CURLPP_LIBS)
+    elif test "x$CURLPP_VERSION" = "xlibcurlpp 0.5.0-rc5"; then
+	AC_MSG_CHECKING(CURLPP_CFLAGS)
+	CURLPP_CFLAGS=`curlpp-config --cflags`
+	AC_MSG_RESULT($CURLPP_CFLAGS)
+	
+	AC_MSG_CHECKING(CURLPP_LIBS)
+	CURLPP_LIBS=`curlpp-config --libs`
+	AC_MSG_RESULT($CURLPP_LIBS)
+	AC_DEFINE(HAVE_LIBCURLPP_DEV)
     else
-	AC_MSG_ERROR([need curlpp version 0.3.2-rc2, have $CURLPP_VERSION], [-1])
+	AC_MSG_ERROR([need curlpp version 0.3.2-rc2 or 0.5.0-rc4, have $CURLPP_VERSION], [-1])
     fi
 else
     AC_MSG_ERROR([curlpp-config not found, please install curlpp package], [-1])
