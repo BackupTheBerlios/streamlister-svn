@@ -74,11 +74,16 @@ class PreferencesDialog : public Gtk::Dialog{
 	
 	Glib::ustring get_url() const;
 	Glib::ustring get_player_cmd() const;
+	void save_prefs() const;
     
     protected:
 	virtual void on_response(int);
     
     private:
+	Gtk::HBox  m_mainHBox;
+	Gtk::VBox  m_leftVBox;
+	Gtk::VBox  m_rightVBox;
+	
 	Gtk::HBox  m_numberHBox;
 	Gtk::Label m_numberLabel;
 	Gtk::Entry m_numberEntry;
@@ -88,6 +93,11 @@ class PreferencesDialog : public Gtk::Dialog{
 	Gtk::HBox  m_PlayerHBox;
 	Gtk::Label m_PlayerLabel;
 	Gtk::Entry m_PlayerEntry;
+	
+	Gtk::HBox   m_buttonHBox;
+	Gtk::Button m_Columns;
+	Gtk::Button m_Ratings;
+	
     
 };
 

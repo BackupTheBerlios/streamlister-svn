@@ -94,7 +94,8 @@ PreferencesDialog::PreferencesDialog(const Glib::ustring &filename)
 	:Gtk::Dialog("Preferences", false, true),
 	 m_numberLabel("Number of entries to get: "),
 	 m_URLLabel("URL of XML file: "),
-	 m_PlayerLabel("player command: ")
+	 m_PlayerLabel("player command: "),
+	 m_Columns("_Columns", true),m_Ratings("_Ratings", true)
 {
     std::cout << "m_URLEntry.get_width_chars(): " << m_URLEntry.get_width_chars() << std::endl;
     
@@ -108,21 +109,28 @@ PreferencesDialog::PreferencesDialog(const Glib::ustring &filename)
     /* make gui */
     //~ set_size_request(300, 200);
     m_numberEntry.set_width_chars(4);
-    m_numberHBox.pack_start(m_numberLabel, Gtk::PACK_SHRINK);
-    m_numberHBox.pack_start(m_numberEntry, Gtk::PACK_SHRINK);
+    m_leftVBox.pack_start(m_numberLabel, Gtk::PACK_EXPAND_PADDING);
+    m_rightVBox.pack_start(m_numberEntry, Gtk::PACK_SHRINK);
     m_URLEntry.set_width_chars(50);
-    m_URLHBox.pack_start(m_URLLabel, Gtk::PACK_SHRINK);
-    m_URLHBox.pack_start(m_URLEntry, Gtk::PACK_SHRINK);
+    m_leftVBox.pack_start(m_URLLabel, Gtk::PACK_EXPAND_PADDING);
+    m_rightVBox.pack_start(m_URLEntry, Gtk::PACK_SHRINK);
     m_PlayerEntry.set_width_chars(50);
-    m_PlayerHBox.pack_start(m_PlayerLabel, Gtk::PACK_SHRINK);
-    m_PlayerHBox.pack_start(m_PlayerEntry, Gtk::PACK_SHRINK);
+    m_leftVBox.pack_start(m_PlayerLabel, Gtk::PACK_EXPAND_PADDING);
+    m_rightVBox.pack_start(m_PlayerEntry, Gtk::PACK_SHRINK);
     
-    get_vbox()->pack_start(m_numberHBox);
-    get_vbox()->pack_start(m_PlayerHBox);
-    get_vbox()->pack_start(m_URLHBox);
+    m_buttonHBox.pack_start(m_Columns, Gtk::PACK_SHRINK);
+    m_buttonHBox.pack_start(m_Ratings, Gtk::PACK_SHRINK);
+    m_mainHBox.pack_start(m_leftVBox, Gtk::PACK_SHRINK);
+    m_mainHBox.pack_start(m_rightVBox, Gtk::PACK_SHRINK);
+    get_vbox()->pack_start(m_mainHBox);
+    get_vbox()->pack_start(m_buttonHBox);
     add_button("_OK", 1);
     add_button("_Cancel", 2);
     show_all_children();
+}
+
+void PreferencesDialog::save_prefs() const {
+    /* save prefs in here */
 }
 
 void PreferencesDialog::run(){
