@@ -15,6 +15,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <cstdlib>
+#include <cassert>
+
+#include <fstream>
+
 #include "playlist_widgets.h"
 
 /*** class PlaylistColumns ***/
@@ -63,7 +68,7 @@ PlaylistView::PlaylistView()
     
     // set the signal handler for activating a tree row
     //~ signal_row_activated().connect(sigc::mem_fun(m_PlaylistView, &PlaylistView::on_row_activated));
-    std::cout << "Setting dummy model" << std::endl;
+    dout(9) << "Setting dummy model" << std::endl;
     Gtk::TreeModel::ColumnRecord dummy_cols;
     Gtk::TreeModelColumn<Glib::ustring> dummy_col;
     dummy_cols.add(dummy_col);
@@ -86,7 +91,7 @@ void PlaylistView::set_model(const Glib::RefPtr<Gtk::TreeModel>& model){
 
 #if 0
 void PlaylistView::on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn* column){
-    std::cout << "PlaylistView::on_row_activated()" << std::endl;
+    dout(7) << "PlaylistView::on_row_activated()" << std::endl;
     std::cout << "  " << column->get_title() << ": " << path.to_string() << std::endl;
     std::cout << "  Playing MPlayer ..." << std::endl;
     
@@ -144,7 +149,7 @@ void PlaylistView::on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeV
 	}
 	catch ( curlpp::exception & e )
 	{
-	  std::cout << "+++CURLPP::ERROR : " << e.what() << std::endl;
+	  std::cerr << "+++CURLPP::ERROR : " << e.what() << std::endl;
 	}
 	
 	PlaylistFile plsfile(body);
@@ -181,21 +186,21 @@ void PlaylistView::on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeV
 	//~ std::cout << "mplayer -v -nocache '" << streamurl << "'" << std::endl;
 	std::cout << string_subst(m_parent->get_prefs().get_player_cmd(), streamurl) << std::endl;
     }else
-	std::cout << "iterator not valid? hmm, something fishy" << std::endl;
+	std::cerr << "iterator not valid? hmm, something fishy" << std::endl;
     
     return Gtk::TreeView::on_row_activated(path, column);
 }
 #endif
 
 bool PlaylistView::on_button_press_event(GdkEventButton *evbutton){
-    std::cout << "PlaylistView::on_button_press_event()" << std::endl;
+    dout(7) << "PlaylistView::on_button_press_event()" << std::endl;
     assert(evbutton->type == GDK_BUTTON_PRESS ||
 	   evbutton->type == GDK_2BUTTON_PRESS ||
 	   evbutton->type == GDK_3BUTTON_PRESS);
     if(evbutton->button == RIGHT_MOUSE_BUTTON){
 	// need to check for right-click, that is right press -> right release
-	std::cout << "  Type: " << evbutton->type << std::endl;
-	std::cout << "  Button: " << evbutton->button << std::endl;
+	dout(9) << "  Type: " << evbutton->type << std::endl;
+	dout(9) << "  Button: " << evbutton->button << std::endl;
     }
     
     // call default handler
@@ -203,12 +208,12 @@ bool PlaylistView::on_button_press_event(GdkEventButton *evbutton){
 }
 
 bool PlaylistView::on_button_release_event(GdkEventButton *evbutton){
-    std::cout << "PlaylistView::on_button_release_event()" << std::endl;
+    dout(7) << "PlaylistView::on_button_release_event()" << std::endl;
     assert(evbutton->type == GDK_BUTTON_RELEASE);
     if(evbutton->button == RIGHT_MOUSE_BUTTON){
 	// need to check for right-click, that is right press -> right release
-	std::cout << "  Type: " << evbutton->type << std::endl;
-	std::cout << "  Button: " << evbutton->button << std::endl;
+	dout(9) << "  Type: " << evbutton->type << std::endl;
+	dout(9) << "  Button: " << evbutton->button << std::endl;
 	
 	int tx=0, ty=0;
 	tree_to_widget_coords((int) evbutton->x, (int) evbutton->y,
