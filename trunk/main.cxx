@@ -582,11 +582,34 @@ void MainWindow::_get_playlist(){
 	    dout(3) << ("+++CURLPP::ERROR : "  __FILE__ ":") << __LINE__ << ": " << e.what() << std::endl;
 	    //~ continue;
 	}
-    
+	
+	char *pbuffer = (char*)body_memory_trait.buffer();
+	std::auto_ptr<char> ap;
+	
+#ifdef HAVE_LIBZ
+	dout(1) << "Doing prelim check for xml format" << std::endl;
+	// preliminary xml format check, if not try to inflate using zlib
+	if(Glib::ustring(pbuffer, 5) != Glib::ustring("<?xml")){
+	    dout(1) << "Not XML, trying to deflate ..." << std::endl;
+	    
+	    ap = decompress(pbuffer, body_memory_trait.length());
+	    if(!ap.get()){
+		dout(3) << "NULL decompression buffer returned (see above error)" << std::endl;
+		return;
+	    }
+	    
+	    dout(3) << "First 50 chars" << std::endl << Glib::ustring(ap.get(), 50) << std::endl;
+	    
+	    assert(Glib::ustring(ap.get(), 5) == Glib::ustring("<?xml"));
+	    
+	    pbuffer = ap.get();
+	}
+#endif /* HAVE_LIBZ */
+	
 	// parse xml tv listing
 	try{
 	    //~ playlist_data.parse_file(m_tmp_filename);
-	    playlist_data.parse_memory(body_memory_trait.string());
+	    playlist_data.parse_memory(pbuffer);
 	}catch(xmlpp::exception e){
 	    //~ dout(3) << "ERROR parsing streamlisting: " << m_tmp_filename << std::endl;
 	    dout(3) << "ERROR parsing streamlisting" << std::endl;
