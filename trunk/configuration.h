@@ -47,8 +47,8 @@ class Configuration{
 	string_type get_url() const {return m_url;}
 	string_type get_num_entries() const {return m_num_entries;}
 	bool get_cache_pls() const {return m_cache_pls;}
-	const itemlist_type& get_columns() const {return m_columns;}
-	const itemlist_type& get_ratings() const {return m_ratings;}
+	itemlist_type& get_columns() {return m_columns;}
+	itemlist_type& get_ratings() {return m_ratings;}
 	
 	/* Setters */
 	void set_configfile(const string_type &s){m_configfile = s;}
@@ -56,8 +56,8 @@ class Configuration{
 	void set_url(const string_type &s){m_url = s;}
 	void set_num_entries(const string_type &s){m_num_entries = s;}
 	void set_cache_pls(bool b){m_cache_pls = b;}
-	void set_columns(itemlist_type);
-	void set_ratings(itemlist_type);
+	void set_columns(const itemlist_type &);
+	void set_ratings(const itemlist_type &);
 	
 	//~ Glib::ustring operator [](const string_type& k){
 	    
