@@ -18,54 +18,17 @@
 #ifndef __PLAYLIST_WIDGETS_H__
 #define __PLAYLIST_WIDGETS_H__
 
-#include <cstdlib>
-#include <cassert>
-
 #include <iostream>
-#include <fstream>
 
-#include <string>
-#include <ext/hash_set>
+#include "utility.h"
+
 #include <ext/hash_map>
 
 #include <gtkmm.h>
-#include <curlpp/curlpp.hpp>
-#include <curlpp/http_easy.hpp>
 
 #include "playlist.h"
 #include "dialog_boxes.h"
-
-#if 1
-/*** curlpp trait derived classes  ***/
-namespace curlpp
-{
-    class output_ustring_trait : public curlpp::output_trait {
-	public:
-	    output_ustring_trait( ) {}
-	    virtual ~output_ustring_trait() {}
-	    
-	    virtual size_t write( void *buffer, size_t length ){
-		std::cout << "--- output_ustring_trait::write()" << std::endl;
-		m_data.append(static_cast<const char*>(buffer), length);
-		return length;
-	    }
-	    
-	private:
-	    Glib::ustring m_data;
-    };
-    
-    class output_null_trait : public curlpp::output_trait {
-	public:
-	    output_null_trait( ) {}
-	    virtual ~output_null_trait() {}
-	    
-	    virtual size_t write( void *buffer, size_t length ){
-		//~ std::cout << "--- output_null_trait::write()" << std::endl;
-		return length;
-	    }
-    };
-} /*** END CURLPP TRAITS ***/
-#endif
+//~ #include "utility.h"
 
 /* 
  *  **** Start GTKmm code ****
@@ -107,7 +70,7 @@ template <class T>
 void
 PlaylistColumns<T>::add(const PlaylistColumns<T>::key_type& name){
     typename PlaylistColumns<T>::column_type& column = *(new typename PlaylistColumns<T>::column_type);
-    //~ std::cout << "PlaylistColumns::add() : " << name << "(" << (&column) << ")" << std::endl;
+    dout(9) << "PlaylistColumns::add() : " << name << "(" << (&column) << ")" << std::endl;
     column_ordering.push_back(name);
     column_mapping[name] = &column;
     this->Gtk::TreeModel::ColumnRecord::add(column);
