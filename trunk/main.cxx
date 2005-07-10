@@ -355,7 +355,7 @@ Gtk::Widget* MainWindow::_create_menu(){
 	    "    <!-- <menuitem action='ReloadMenu'/> -->"
 	    "    <menu action='BookmarksMenu'>"
 	    "      <separator/>"
-	    "      <menuitem action='HelpAbout'/>"
+	    "      <!-- <menuitem action='HelpAbout'/> -->"
 	    "    </menu>"
 	    "    <menu action='HelpMenu'>"
 	    "      <menuitem action='HelpAbout'/>"
