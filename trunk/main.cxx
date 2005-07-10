@@ -606,9 +606,9 @@ void MainWindow::_get_playlist(){
 	
 	request.perform();
     }catch ( cURLpp::LogicError & e ){
-       std::cout << e.what() << std::endl;
+       std::cerr << e.what() << std::endl;
     }catch ( cURLpp::RuntimeError & e ){
-       std::cout << e.what() << std::endl;
+       std::cerr << e.what() << std::endl;
     }
     
     char *pbuffer = const_cast<char *>(buffer.data());
@@ -732,9 +732,9 @@ void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeVi
 	    
 	    request.perform();
 	}catch ( cURLpp::LogicError & e ){
-	   std::cout << e.what() << std::endl;
+	   std::cerr << e.what() << std::endl;
 	}catch ( cURLpp::RuntimeError & e ){
-	   std::cout << e.what() << std::endl;
+	   std::cerr << e.what() << std::endl;
 	}
 #else
 	try
