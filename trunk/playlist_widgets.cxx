@@ -118,6 +118,8 @@ void PlaylistView::on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeV
 	Glib::ustring body;
 	try
 	{
+#ifdef HAVE_LIBCURLPP_DEV
+#else
 	    // get the real url
 	    //~ curlpp::cleanup cleanup;
 	    //~ curlpp::output_ustring_trait o_us_trait;
@@ -146,6 +148,7 @@ void PlaylistView::on_row_activated(const Gtk::TreeModel::Path& path, Gtk::TreeV
 	    Glib::ustring header(header_memory_trait.string());
 	    //~ cout << body_memory_trait.length() << ":||" << body << "||" << std::endl;
 	    //~ cout << header_memory_trait.length() << ":||" << header << "||" << std::endl;
+#endif
 	}
 	catch ( curlpp::exception & e )
 	{
@@ -224,10 +227,10 @@ bool PlaylistView::on_button_release_event(GdkEventButton *evbutton){
 	Gtk::TreeModel::Path path;
 	Gtk::TreeViewColumn* column;
 	if(get_path_at_pos((int) evbutton->x, (int) evbutton->y, path, column, cellx, celly)){
-	    std::cout << "  cellx = " << cellx << std::endl;
-	    std::cout << "  celly = " << celly << std::endl;
-	    std::cout << "  path = " << path.to_string() << std::endl;
-	    std::cout << "  column = " << column->get_title() << std::endl;
+	    dout(3) << "  cellx = " << cellx << std::endl;
+	    dout(3) << "  celly = " << celly << std::endl;
+	    dout(3) << "  path = " << path.to_string() << std::endl;
+	    dout(3) << "  column = " << column->get_title() << std::endl;
 	}
     }
     
