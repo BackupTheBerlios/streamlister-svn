@@ -94,7 +94,7 @@ PlayerWindow::PlayerWindow(string_type cmd, string_type streamurl):
 	m_player_pid(0), m_chld_stdin(-1), m_chld_stderr(-1){
     Gdk::NativeWindow wid;
     Gtk::Socket mp_socket;
-    bool use_window = cmd.find("%w") < string_type::npos;
+    bool use_window = cmd.find("%w") != string_type::npos;
     Glib::ustring player_cmd = string_subst(cmd, streamurl);
     int newstderr, newstdin;
     
@@ -351,7 +351,7 @@ bool PlayerWindow::on_key_press_event(GdkEventKey* event){
     
     /* send through to the underlying window */
     //~ Gdk::Event((GdkEvent*)event).send_client_message(m_swid);
-    Gdk::Event((GdkEvent*)event).put();
+    //~ Gdk::Event((GdkEvent*)event).put(); // infinite loop
     
     
     return true;
