@@ -34,39 +34,53 @@ AC_TYPE_SIZE_T
 AC_FUNC_STAT
 
 # Checks for required packages.
-PKG_CHECK_MODULES([GTKMM], [gtkmm-2.4 >= 2.4.7], [], [])
+PKG_CHECK_MODULES([GTKMM], [gtkmm-2.4 atkmm-1.6 gdkmm-2.4 pangomm-1.4 glibmm-2.4], [], [])
 PKG_CHECK_MODULES([LIBXMLPP], [libxml++-2.6 >= 2.6.1], [], [])
 dnl PKG_CHECK_MODULES([CURLPP], [curlpp >= 0.3.2-rc2], [], [])
 
-dnl Only need this till curlpp project make a pkg-config module
-AC_CHECK_PROG([CURLPP_CONFIG], [curlpp-config], [yes], [no])
-if test "x$CURLPP_CONFIG" = "xyes"; then
-    AC_MSG_CHECKING(curlpp version)
-    CURLPP_VERSION=`curlpp-config --version`
-    AC_MSG_RESULT($CURLPP_VERSION)
-    if test "x$CURLPP_VERSION" = "xlibcurlpp 0.3.2-rc2"; then
-	AC_MSG_CHECKING(CURLPP_CFLAGS)
-	CURLPP_CFLAGS=`curlpp-config --cflags`
-	AC_MSG_RESULT($CURLPP_CFLAGS)
-	
-	AC_MSG_CHECKING(CURLPP_LIBS)
-	CURLPP_LIBS=`curlpp-config --libs`
-	AC_MSG_RESULT($CURLPP_LIBS)
-    elif test "x$CURLPP_VERSION" = "xlibcurlpp 0.5.0-rc5"; then
-	AC_MSG_CHECKING(CURLPP_CFLAGS)
-	CURLPP_CFLAGS=`curlpp-config --cflags`
-	AC_MSG_RESULT($CURLPP_CFLAGS)
-	
-	AC_MSG_CHECKING(CURLPP_LIBS)
-	CURLPP_LIBS=`curlpp-config --libs`
-	AC_MSG_RESULT($CURLPP_LIBS)
-	AC_DEFINE(HAVE_LIBCURLPP_DEV)
-    else
-	AC_MSG_ERROR([need curlpp version 0.3.2-rc2 or 0.5.0-rc4, have $CURLPP_VERSION], [-1])
-    fi
+if false; then
+PKG_CHECK_MODULES([CURLPP], [curlpp >= 0.5.0], [
+    echo checking curlpp version... libcurlpp `pkg-config --modversion curlpp`
+    AC_DEFINE(HAVE_LIBCURLPP_DEV)
+], [
+    PKG_CHECK_MODULES([CURLPP], [curlpp >= 0.3.3], [
+	echo checking curlpp version... libcurlpp `pkg-config --modversion curlpp`
+    ], [
+	AC_MSG_ERROR([need curlpp version 0.3.3 or 0.5.0, have $CURLPP_VERSION], [-1])
+    ])
+])
+
 else
-    AC_MSG_ERROR([curlpp-config not found, please install curlpp package], [-1])
+
+PKG_PROG_PKG_CONFIG([])
+dnl Only need this till curlpp project make a pkg-config module
+if $PKG_CONFIG curlpp; then
+    echo -n 'checking curlpp version... '
+    if $PKG_CONFIG --exists 'curlpp >= 0.5.0'; then
+	echo `$PKG_CONFIG --modversion curlpp`
+	PKG_CHECK_MODULES([CURLPP], [curlpp >= 0.5.0], [], [])
+    dnl    AC_MSG_CHECKING(CURLPP_CFLAGS)
+    dnl    CURLPP_CFLAGS=`curlpp-config --cflags`
+    dnl    AC_MSG_RESULT($CURLPP_CFLAGS)
+	
+    dnl    AC_MSG_CHECKING(CURLPP_LIBS)
+    dnl    CURLPP_LIBS=`curlpp-config --libs`
+    dnl    AC_MSG_RESULT($CURLPP_LIBS)
+	
+	AC_DEFINE(HAVE_LIBCURLPP_DEV)
+    elif $PKG_CONFIG --exists 'curlpp >= 0.3.3'; then
+	echo `$PKG_CONFIG --modversion curlpp`
+	PKG_CHECK_MODULES([CURLPP], [curlpp >= 0.3.3], [], [])
+    else
+	echo
+	AC_MSG_ERROR([need curlpp version 0.3.3 or 0.5.0, have `$PKG_CONFIG --modversion curlpp`], [-1])
+    fi;dnl
+else
+    AC_MSG_ERROR([need curlpp version 0.3.3 or 0.5.0], [-1])
 fi;dnl
+
+fi;dnl
+
 AC_SUBST(CURLPP_CFLAGS)
 AC_SUBST(CURLPP_LIBS)
 
