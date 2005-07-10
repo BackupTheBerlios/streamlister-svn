@@ -15,10 +15,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>  // system
-#include <fcntl.h>   // open
+//~ #include <sys/types.h>
+//~ #include <sys/stat.h>
+//~ #include <unistd.h>  // system
+//~ #include <fcntl.h>   // open
 
 #include <cstdlib>
 #include <cassert>
@@ -49,6 +49,7 @@
 #include "playlist.h"
 #include "playlist_widgets.h"
 #include "utility.h"
+#include "player_window.h"
 
 /* globally constructed objects */
 dstream dout;
@@ -800,6 +801,15 @@ void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeVi
 	}
 	
 	// send to mplayer
+	if(streamurl != "")
+	    //~ new PlayerWindow(m_PreferencesDialog.get_player_cmd(), streamurl);
+	    PlayerWindow(m_PreferencesDialog.get_player_cmd(), streamurl);
+	else
+	    dout(3) << "No stream url found." << std::endl;
+	
+	return;
+	
+#if 0
 	//~ dout << "mplayer -v -nocache '" << streamurl << "'" << std::endl;
 	Glib::ustring player_cmd = string_subst(m_PreferencesDialog.get_player_cmd(), streamurl);
 	dout(3) << player_cmd << std::endl;
@@ -838,6 +848,7 @@ void MainWindow::_get_playlistfile(const Gtk::TreeModel::Path& path, Gtk::TreeVi
 	    }
 #endif
 	}
+#endif
     }else
 	dout(3) << "iterator not valid? hmm, something fishy" << std::endl;
 }
