@@ -212,7 +212,7 @@ namespace curlpp
 	    virtual ~output_ustring_trait() {}
 	    
 	    virtual size_t write( void *buffer, size_t length ){
-		std::dout(9) << "--- output_ustring_trait::write()" << std::endl;
+		dout(9) << "--- output_ustring_trait::write()" << std::endl;
 		m_data.append(static_cast<const char*>(buffer), length);
 		return length;
 	    }
