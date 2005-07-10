@@ -8,7 +8,11 @@ AC_CONFIG_SRCDIR([playlist.cxx])
 AM_INIT_AUTOMAKE([no-define dist-bzip2])
 
 # Enable arguments
-AC_ARG_ENABLE(zlib, [  --enable-zlib           include support for compressed streams using zlib (default=enable)], , enable_zlib=yes)
+dnl AC_ARG_ENABLE([zlib], [  --enable-zlib           include support for compressed streams using zlib (default=enable)], , enable_zlib=yes)
+AC_ARG_ENABLE([zlib],
+	      AC_HELP_STRING([--enable-zlib],
+              [include support for compressed streams using zlib [[enabled]]]), ,
+	      enable_zlib=yes)
 
 # Checks for programs.
 AC_PROG_CXX
