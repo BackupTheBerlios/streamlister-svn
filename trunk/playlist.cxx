@@ -211,7 +211,7 @@ void Playlist::_parse_document(){
     
     dout(9) << "m_ratings.size() = " << m_ratings.size() << std::endl;
     for(std::vector<Glib::ustring>::iterator i = m_ratings.begin(); i != m_ratings.end(); i++){
-	std::cout << *i << std::endl;
+	dout(9) << *i << std::endl;
     }
 }
 

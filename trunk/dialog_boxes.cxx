@@ -87,7 +87,7 @@ int StationSelectionDialog::run(const std::vector<Glib::ustring>& titles){
 
 void StationSelectionDialog::on_response(int response_id){
     // clear model
-    std::cout << "Clear Model" << std::endl;
+    dout(7) << "Clear Model" << std::endl;
     m_ListStoreRef->clear();
     
     hide();
