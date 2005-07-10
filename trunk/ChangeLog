@@ -1,3 +1,228 @@
+2005-07-10 11:37  crass
+
+	* trunk/playlist_widgets.cxx: cout -> dout
+
+2005-07-10 11:36  crass
+
+	* trunk/main.cxx: take out bookmark menu till its functional
+
+2005-07-10 11:35  crass
+
+	* trunk/player_window.cxx: minor bug fixes
+
+2005-07-10 11:16  crass
+
+	* trunk/dialog_boxes.cxx, trunk/playlist.cxx: cout -> dout
+
+2005-07-10 11:15  crass
+
+	* trunk/main.cxx: make error output go to stderr instead of stdout
+
+2005-07-10 11:09  crass
+
+	* trunk/configure.in: add debug arg, change zlib from an enable
+	  option to a with option
+
+2005-07-10 11:08  crass
+
+	* trunk/main.cxx: have debug level set by DEBUG_LEVEL macro
+
+2005-07-10 10:44  crass
+
+	* trunk/configure.in: gtkmm pkg-config script does not seem to
+	  include all dependant libs, so must explicitly include them. also
+	  use pkg-config to detect both/either curlpp versions
+
+2005-07-10 09:29  crass
+
+	* trunk/utility.h: dout is not in ns std (error when replacing cout
+	  to dout)
+
+2005-07-10 08:51  crass
+
+	* trunk/main.cxx: replace video hack with PlayerWindow code
+
+2005-07-10 08:47  crass
+
+	* trunk/playlist_widgets.cxx: cout -> dout, add HAVE_LIBCURLPP_DEV
+	  ifdef
+
+2005-07-10 08:41  crass
+
+	* trunk/player_window.cxx, trunk/player_window.h: add PlayerWindow
+	  class
+
+2005-07-10 08:40  crass
+
+	* trunk/Makefile.am: add player_window.cxx and player_window.h
+
+2005-07-10 08:39  crass
+
+	* trunk/configure.in: make help for zlib a little nicer
+
+2005-03-28 10:47  crass
+
+	* trunk/Makefile.am: add utility.cxx
+
+2005-03-28 10:46  crass
+
+	* trunk/utility.cxx: add file
+
+2005-03-28 10:44  crass
+
+	* trunk/main.cxx: add curlpp dev support
+
+2005-03-28 10:43  crass
+
+	* trunk/configure.in: add zlib option, and curlpp dev support
+
+2005-03-28 10:41  crass
+
+	* trunk/utility.h: add ifdef for different curlpp headers, add write
+	  function
+
+2005-03-17 05:27  crass
+
+	* trunk/configure.in: add option for enabling zlib decompression
+
+2005-03-17 05:25  crass
+
+	* trunk/main.cxx: add checking to see if the xml stream was
+	  compressed and try to decompress it
+
+2005-03-17 05:24  crass
+
+	* trunk/utility.h: add function for decompressing a chunk of memory
+	  using zlib
+
+2004-12-21 05:01  crass
+
+	* trunk/configuration.cxx, trunk/configuration.h: change
+	  get_columns, and get_ratings to return non-const references
+
+2004-12-21 04:58  crass
+
+	* trunk/main.cxx: take out Columns menu item, put in code to check
+	  the preferences for which columns to display
+
+2004-12-21 04:56  crass
+
+	* trunk/playlist.h: add get_ratings() to Playlist
+
+2004-12-21 04:55  crass
+
+	* trunk/utility.h: add functor for comparing a pair with an object
+	  of the pairs first argument type
+
+2004-12-21 04:53  crass
+
+	* trunk/dialog_boxes.cxx, trunk/dialog_boxes.h: make m_vectorItems a
+	  reference, add typedefs
+
+2004-12-21 00:06  crass
+
+	* trunk/dialog_boxes.cxx, trunk/dialog_boxes.h: change return type
+	  of all run member functions to int from void
+
+2004-12-20 22:43  crass
+
+	* trunk/playlist.cxx: body -> plsfile (copy / paste fuckup)
+
+2004-12-20 22:42  crass
+
+	* trunk/main.cxx: make _get_playlist() so that load_data only puts
+	  data into widget, get rid of Configuration object which has been
+	  moved into PreferencesDialog widget
+
+2004-12-20 22:39  crass
+
+	* trunk/dialog_boxes.cxx, trunk/dialog_boxes.h: add
+	  CheckboxListDialog class, move Configuration declaration so that
+	  it is the first constructed member (CheckboxListDialog relies on
+	  this), rename some private data members in PreferencesDialog,
+	  change PreferencesDialog to use Configuration object instead of
+	  copying data members, make widgets not store values on a cancel
+
+2004-12-20 22:30  crass
+
+	* trunk/configuration.cxx, trunk/configuration.h: change
+	  save_config() -> save(), add typedefs
+
+2004-12-17 08:10  crass
+
+	* trunk/playlist.cxx: change pls output to dout(1)
+
+2004-12-17 08:09  crass
+
+	* trunk/playlist.cxx: print pls file to cerr on error
+
+2004-12-16 07:15  crass
+
+	* trunk/playlist.cxx: use typedef'd string_type, have some errors
+	  output to cerr, add parse_memory and make one function to get data
+	  from parsed xml, convert debugging to dout, add headers from .h
+
+2004-12-16 07:11  crass
+
+	* trunk/main.cxx: convert some debugging to dout, keep xml file in
+	  memory instead of writing temp file, delete some unused headers
+
+2004-12-16 07:07  crass
+
+	* trunk/playlist_widgets.cxx: convert debugging to dout, add
+	  standard headers from .h
+
+2004-12-16 07:06  crass
+
+	* trunk/dialog_boxes.cxx: convert debugging to dout
+
+2004-12-16 07:05  crass
+
+	* trunk/playlist.h: add typedef for Glib::ustring
+
+2004-12-16 05:53  crass
+
+	* trunk/utility.h: add gpl header, put curlpp traits in here
+
+2004-12-16 05:53  crass
+
+	* trunk/configuration.cxx, trunk/configuration.h: add gpl header
+
+2004-12-15 21:18  crass
+
+	* trunk/playlist_widgets.h: move curlpp traits into utility.h, move
+	  header files into .cxx
+
+2004-12-15 19:26  crass
+
+	* trunk/dialog_boxes.cxx, trunk/dialog_boxes.h: move unnecessary
+	  headers out of .h and into .cxx (should improve compile time)
+
+2004-12-15 18:38  crass
+
+	* trunk/main.cxx: fix bug with depreciated fileselection code, use
+	  file_exists() instead of raw stat(), add pref saving in
+	  destructor, add save prefs to menu
+
+2004-12-15 18:36  crass
+
+	* trunk/configuration.cxx, trunk/configuration.h: write parser for
+	  configfiles
+
+2004-12-15 18:34  crass
+
+	* trunk/utility.h: dstream: move prefix output to operator(), fix
+	  set_debug_level()
+
+2004-12-15 18:32  crass
+
+	* trunk/Makefile.am: add configuration.cxx to courses, and target
+	  for making ChangeLog
+
+2004-12-15 05:07  crass
+
+	* trunk/ChangeLog: update ChangeLog for version 0.2
+
 2004-12-14 08:06  crass
 
 	* trunk/configure.in: update version
