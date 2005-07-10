@@ -44,6 +44,10 @@
 #define _DEPRECIATED_FILESELECTION 0
 #define __C_VIDEO_HACK_
 
+#ifndef DEBUG_LEVEL
+#define DEBUG_LEVEL 0
+#endif
+
 #include "configuration.h"
 #include "dialog_boxes.h"
 #include "playlist.h"
@@ -888,7 +892,7 @@ bool MainWindow::_rating_filter(const Gtk::TreeModel::const_iterator& iter){
 }
 
 int main(int argc, char *argv[]){
-    //~ dout.set_debug_level(9);
+    dout.set_debug_level(DEBUG_LEVEL);
     dout << "XML shoutcast tvlisting Parser" << std::endl;
     
     Gtk::Main kit(argc, argv);
