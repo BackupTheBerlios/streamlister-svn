@@ -221,7 +221,7 @@ bool PlaylistView::on_button_release_event(GdkEventButton *evbutton){
 	int tx=0, ty=0;
 	tree_to_widget_coords((int) evbutton->x, (int) evbutton->y,
 			      tx, ty);
-	std::cout << "  tx = " << tx << ", ty = " << ty << std::endl;
+	dout(3) << "  tx = " << tx << ", ty = " << ty << std::endl;
 	
 	int cellx=0, celly=0;
 	Gtk::TreeModel::Path path;
